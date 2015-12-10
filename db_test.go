@@ -167,7 +167,7 @@ func TestDB_ProcessSQL(t *testing.T) {
 }
 
 func TestDB_Begin(t *testing.T) {
-	db := getDB()
+	db := getPreparedDB()
 
 	var (
 		lastID int
