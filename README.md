@@ -362,6 +362,22 @@ q := db.CreateTable("users", map[string]string{
 q.Execute()
 ```
 
+## Quoting Table and Column Names
+
+Databases vary in quoting table and column names. To allow writing DB-agnostic SQLs, ozzo-dbx introduces a special
+syntax in quoting table and column names. A word enclosed within `{{` and `}}` is treated as a table name and will
+be quoted according to the particular DB driver. Similarly, a word enclosed within `[[` and `]]` is treated as a 
+column name and will be quoted accordingly as well. For example, when working with a MySQL database, the following
+query will be properly quoted:
+
+```go
+// SELECT * FROM `users` WHERE `status`=1
+q := db.NewQuery("SELECT * FROM {{users}} WHERE [[status]]=1")
+```
+
+Note that if a table or column name contains a prefix, it will still be properly quoted. For example, `{{public.users}}`
+will be quoted as `"public"."users"` for PostgreSQL.
+
 ## Using Transactions
 
 You can use all aforementioned query execution and building methods with transaction. For example,
