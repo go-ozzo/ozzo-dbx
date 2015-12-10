@@ -11,27 +11,23 @@ import (
 	"regexp"
 )
 
-// Logger specifies the logger interface needed to log SQL statements being executed.
-type Logger interface {
-	// Info logs a message for informational purpose.
-	// This method takes one or multiple parameters. If a single parameter
-	// is provided, it will be treated as the log message. If multiple parameters
-	// are provided, they will be passed to fmt.Sprintf() to generate the log message.
-	Info(format string, a ...interface{})
-}
+// LogFunc logs a message for each SQL statement being executed.
+// This method takes one or multiple parameters. If a single parameter
+// is provided, it will be treated as the log message. If multiple parameters
+// are provided, they will be passed to fmt.Sprintf() to generate the log message.
+type LogFunc func(format string, a ...interface{})
 
 // DB enhances sql.DB by providing a set of DB-agnostic query building methods.
 // DB allows easier query building and population of data into Go variables.
 type DB struct {
 	Builder
 
-	// BaseDB stores the sql.DB instance that is encapsulated by DB.
-	BaseDB      *sql.DB
 	// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
 	FieldMapper FieldMapFunc
-	// Logger logs the SQL statements being executed. Defaults to nil, meaning no logging.
-	Logger      Logger
+	// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
+	LogFunc     LogFunc
 
+	sqlDB       *sql.DB
 	driverName  string
 }
 
@@ -54,17 +50,17 @@ var BuilderFuncMap = map[string]BuilderFunc{
 // Note that Open does not check if DSN is specified correctly. It doesn't try to establish a DB connection either.
 // Please refer to sql.Open() for more information.
 func Open(driverName, dsn string) (*DB, error) {
-	baseDB, err := sql.Open(driverName, dsn)
+	sqlDB, err := sql.Open(driverName, dsn)
 	if err != nil {
 		return nil, err
 	}
 
 	db := &DB{
 		driverName: driverName,
-		BaseDB: baseDB,
+		sqlDB: sqlDB,
 		FieldMapper: DefaultFieldMapFunc,
 	}
-	db.Builder = db.newBuilder(db.BaseDB)
+	db.Builder = db.newBuilder(db.sqlDB)
 
 	return db, nil
 }
@@ -76,22 +72,27 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := db.BaseDB.Ping(); err != nil {
+	if err := db.sqlDB.Ping(); err != nil {
 		return nil, err
 	}
 	return db, nil
+}
+
+// DB returns the sql.DB instance encapsulated by dbx.DB.
+func (db *DB) DB() *sql.DB {
+	return db.sqlDB
 }
 
 // Close closes the database, releasing any open resources.
 // It is rare to Close a DB, as the DB handle is meant to be
 // long-lived and shared between many goroutines.
 func (db *DB) Close() error {
-	return db.BaseDB.Close()
+	return db.sqlDB.Close()
 }
 
 // Begin starts a transaction.
 func (db *DB) Begin() (*Tx, error) {
-	tx, err := db.BaseDB.Begin()
+	tx, err := db.sqlDB.Begin()
 	if err != nil {
 		return nil, err
 	}

@@ -230,10 +230,10 @@ func (b *BaseBuilder) CreateTable(table string, cols map[string]string, options 
 
 	columns := []string{}
 	for _, name := range names {
-		columns = append(columns, "\t" + b.db.QuoteColumnName(name) + " " + cols[name])
+		columns = append(columns, b.db.QuoteColumnName(name) + " " + cols[name])
 	}
 
-	sql := fmt.Sprintf("CREATE TABLE %v (\n%v\n)", b.db.QuoteTableName(table), strings.Join(columns, ",\n"))
+	sql := fmt.Sprintf("CREATE TABLE %v (%v)", b.db.QuoteTableName(table), strings.Join(columns, ", "))
 	for _, opt := range options {
 		sql += " " + opt
 	}

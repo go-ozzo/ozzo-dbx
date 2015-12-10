@@ -65,7 +65,7 @@ func TestMssqlQueryBuilder_BuildOrderByAndLimit(t *testing.T) {
 
 func getMssqlBuilder() Builder {
 	db := getDB()
-	b := NewMssqlBuilder(db, db.BaseDB)
+	b := NewMssqlBuilder(db, db.sqlDB)
 	db.Builder = b
 	return b
 }

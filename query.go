@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"fmt"
+	"time"
 )
 
 // Params represents a list of parameter values to be bound to a SQL statement.
@@ -39,8 +40,8 @@ type Query struct {
 	FieldMapper  FieldMapFunc
 	// LastError contains the last error (if any) of the query.
 	LastError    error
-	// Logger is used to log the SQL statement being executed.
-	Logger       Logger
+	// LogFunc is used to log the SQL statement being executed.
+	LogFunc      LogFunc
 }
 
 // NewQuery creates a new Query with the given SQL statement.
@@ -53,7 +54,7 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 		placeholders: placeholders,
 		params: Params{},
 		FieldMapper: db.FieldMapper,
-		Logger: db.Logger,
+		LogFunc: db.LogFunc,
 	}
 }
 
@@ -64,23 +65,32 @@ func (q *Query) SQL() string {
 	return q.sql
 }
 
-// RawSQL returns the SQL statement passed to the underlying DB driver for execution.
-func (q *Query) RawSQL() string {
-	return q.rawSQL
-}
-
 // logSQL returns the SQL statement with parameters being replaced with the actual values.
 // The result is only for logging purpose and should not be used to execute.
 func (q *Query) logSQL() string {
 	s := q.sql
 	for k, v := range q.params {
-		sv := fmt.Sprintf("%v", v)
+		var sv string
 		if _, ok := v.(string); ok {
-			sv = "'" + strings.Replace(sv, "'", "''", -1) + "'"
+			sv = "'" + strings.Replace(v.(string), "'", "''", -1) + "'"
+		} else if _, ok := v.([]byte); ok {
+			sv = "'" + strings.Replace(string(v.([]byte)), "'", "''", -1) + "'"
+		} else {
+			sv = fmt.Sprintf("%v", v)
 		}
 		s = strings.Replace(s, "{:" + k + "}", sv, -1)
 	}
 	return s
+}
+
+// log logs a message for the currently executed SQL statement.
+func (q *Query) log(start time.Time, execute bool) {
+	t := float64(time.Now().Sub(start).Nanoseconds()) / 1e6
+	if execute {
+		q.LogFunc("[%.2fms] Execute SQL: %v", t, q.logSQL())
+	} else {
+		q.LogFunc("[%.2fms] Query SQL: %v", t, q.logSQL())
+	}
 }
 
 // Params returns the parameters to be bound to the SQL statement represented by this query.
@@ -136,8 +146,8 @@ func (q *Query) Execute() (sql.Result, error) {
 		return nil, err
 	}
 
-	if q.Logger != nil {
-		q.Logger.Info("Execute SQL: %v", q.logSQL())
+	if q.LogFunc != nil {
+		defer q.log(time.Now(), true)
 	}
 
 	var result sql.Result
@@ -154,11 +164,16 @@ func (q *Query) Execute() (sql.Result, error) {
 // Refer to Rows.ScanStruct() and Rows.ScanMap() for more details on how to specify
 // the variable to be populated.
 func (q *Query) One(a interface{}) error {
+	if q.LastError != nil {
+		return q.LastError
+	}
+
 	rows, err := q.Rows()
 	if err != nil {
-		return err
+		q.LastError = err
+	} else {
+		q.LastError = rows.one(a)
 	}
-	q.LastError = rows.one(a)
 	return q.LastError
 }
 
@@ -166,22 +181,32 @@ func (q *Query) One(a interface{}) error {
 // The slice must be given as a pointer. The slice elements must be either structs or NullStringMap.
 // Refer to Rows.ScanStruct() and Rows.ScanMap() for more details on how each slice element can be.
 func (q *Query) All(slice interface{}) error {
+	if q.LastError != nil {
+		return q.LastError
+	}
+
 	rows, err := q.Rows()
 	if err != nil {
-		return err
+		q.LastError = err
+	} else {
+		q.LastError = rows.all(slice)
 	}
-	q.LastError = rows.all(slice)
 	return q.LastError
 }
 
 // Row executes the SQL statement and populates the first row of the result into a list of variables.
 // Note that the number of the variables should match to that of the columns in the query result.
 func (q *Query) Row(a ...interface{}) error {
+	if q.LastError != nil {
+		return q.LastError
+	}
+
 	rows, err := q.Rows()
 	if err != nil {
-		return err
+		q.LastError = err
+	} else {
+		q.LastError = rows.row(a...)
 	}
-	q.LastError = rows.row(a...)
 	return q.LastError
 }
 
@@ -197,8 +222,8 @@ func (q *Query) Rows() (*Rows, error) {
 		return nil, err
 	}
 
-	if q.Logger != nil {
-		q.Logger.Info("Query SQL: %v", q.logSQL())
+	if q.LogFunc != nil {
+		defer q.log(time.Now(), false)
 	}
 
 	var rows *sql.Rows

@@ -45,7 +45,7 @@ func TestMysqlBuilder_DropForeignKey(t *testing.T) {
 
 func getMysqlBuilder() Builder {
 	db := getDB()
-	b := NewMysqlBuilder(db, db.BaseDB)
+	b := NewMysqlBuilder(db, db.sqlDB)
 	db.Builder = b
 	return b
 }

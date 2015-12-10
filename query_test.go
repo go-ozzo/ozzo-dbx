@@ -17,9 +17,9 @@ type City struct {
 func TestNewQuery(t *testing.T) {
 	db := getDB()
 	sql := "SELECT * FROM users WHERE id={:id}"
-	q := NewQuery(db, db.BaseDB, sql)
+	q := NewQuery(db, db.sqlDB, sql)
 	assertEqual(t, q.SQL(), sql, "q.SQL()")
-	assertEqual(t, q.RawSQL(), "SELECT * FROM users WHERE id=?", "q.RawSQL()")
+	assertEqual(t, q.rawSQL, "SELECT * FROM users WHERE id=?", "q.RawSQL()")
 
 	assertEqual(t, len(q.Params()), 0, "len(q.Params())@1")
 	q.Bind(Params{"id": 1})

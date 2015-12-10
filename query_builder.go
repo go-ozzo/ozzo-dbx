@@ -109,7 +109,7 @@ func (q *BaseQueryBuilder) BuildJoin(joins []JoinInfo, params Params) string {
 		}
 		parts = append(parts, sql)
 	}
-	return strings.Join(parts, "\n")
+	return strings.Join(parts, " ")
 }
 
 func (q *BaseQueryBuilder) BuildWhere(e Expression, params Params) string {
@@ -147,10 +147,10 @@ func (q *BaseQueryBuilder) BuildGroupBy(cols []string) string {
 
 func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
 	if orderBy := q.BuildOrderBy(cols); orderBy != "" {
-		sql += "\n" + orderBy
+		sql += " " + orderBy
 	}
 	if limit := q.BuildLimit(limit, offset); limit != "" {
-		return sql + "\n" + limit
+		return sql + " " + limit
 	}
 	return sql
 }
@@ -162,7 +162,7 @@ func (q *BaseQueryBuilder) BuildUnion(unions []UnionInfo, params Params) string 
 	sql := ""
 	for i, union := range unions {
 		if i > 0 {
-			sql += "\n"
+			sql += " "
 		}
 		for k, v := range union.Query.params {
 			params[k] = v

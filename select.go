@@ -252,13 +252,13 @@ func (s *SelectQuery) Build() *Query {
 			if sql == "" {
 				sql = clause
 			} else {
-				sql += "\n" + clause
+				sql += " " + clause
 			}
 		}
 	}
 	sql = qb.BuildOrderByAndLimit(sql, s.orderBy, s.limit, s.offset)
 	if union := qb.BuildUnion(s.union, params); union != "" {
-		sql = fmt.Sprintf("(%v)\n%v", sql, union)
+		sql = fmt.Sprintf("(%v) %v", sql, union)
 	}
 
 	return s.builder.NewQuery(sql).Bind(s.params)

@@ -28,7 +28,7 @@ func TestDB_Open(t *testing.T) {
 	}
 
 	db, _ := Open("mysql", TestDSN)
-	assertNotEqual(t, db.BaseDB, nil, "BaseDB")
+	assertNotEqual(t, db.sqlDB, nil, "BaseDB")
 	assertNotEqual(t, db.FieldMapper, nil, "MapField")
 }
 

@@ -163,7 +163,7 @@ func TestQB_BuildOrderByAndLimit(t *testing.T) {
 	qb := getDB().QueryBuilder()
 
 	sql := qb.BuildOrderByAndLimit("SELECT *", []string{"name"}, 10, 2)
-	expected := "SELECT *\nORDER BY `name`\nLIMIT 10 OFFSET 2"
+	expected := "SELECT * ORDER BY `name` LIMIT 10 OFFSET 2"
 	assertEqual(t, sql, expected, "t1")
 
 	sql = qb.BuildOrderByAndLimit("SELECT *", nil, -1, -1)
@@ -171,11 +171,11 @@ func TestQB_BuildOrderByAndLimit(t *testing.T) {
 	assertEqual(t, sql, expected, "t2")
 
 	sql = qb.BuildOrderByAndLimit("SELECT *", []string{"name"}, -1, -1)
-	expected = "SELECT *\nORDER BY `name`"
+	expected = "SELECT * ORDER BY `name`"
 	assertEqual(t, sql, expected, "t3")
 
 	sql = qb.BuildOrderByAndLimit("SELECT *", nil, 10, -1)
-	expected = "SELECT *\nLIMIT 10"
+	expected = "SELECT * LIMIT 10"
 	assertEqual(t, sql, expected, "t4")
 }
 
@@ -203,7 +203,7 @@ func TestQB_BuildJoin(t *testing.T) {
 	ji = JoinInfo{"INNER JOIN", "users", nil}
 	ji2 := JoinInfo{"LEFT JOIN", "posts", nil}
 	sql = qb.BuildJoin([]JoinInfo{ji, ji2}, nil)
-	expected = "INNER JOIN `users`\nLEFT JOIN `posts`"
+	expected = "INNER JOIN `users` LEFT JOIN `posts`"
 	assertEqual(t, sql, expected, "BuildJoin@3")
 }
 
@@ -232,6 +232,6 @@ func TestQB_BuildUnion(t *testing.T) {
 	ui = UnionInfo{true, db.NewQuery("SELECT names")}
 	ui2 := UnionInfo{false, db.NewQuery("SELECT ages")}
 	sql = qb.BuildUnion([]UnionInfo{ui, ui2}, nil)
-	expected = "UNION ALL (SELECT names)\nUNION (SELECT ages)"
+	expected = "UNION ALL (SELECT names) UNION (SELECT ages)"
 	assertEqual(t, sql, expected, "BuildUnion@4")
 }

@@ -77,7 +77,7 @@ func TestStandardBuilder_CreateTable(t *testing.T) {
 		"id": "int primary key",
 		"name": "varchar(255)",
 	}, "ON DELETE CASCADE")
-	assertEqual(t, q.SQL(), "CREATE TABLE \"users\" (\n\t\"id\" int primary key,\n\t\"name\" varchar(255)\n) ON DELETE CASCADE", "t1")
+	assertEqual(t, q.SQL(), "CREATE TABLE \"users\" (\"id\" int primary key, \"name\" varchar(255)) ON DELETE CASCADE", "t1")
 }
 
 func TestStandardBuilder_RenameTable(t *testing.T) {
@@ -166,7 +166,7 @@ func TestStandardBuilder_DropIndex(t *testing.T) {
 
 func getStandardBuilder() Builder {
 	db := getDB()
-	b := NewStandardBuilder(db, db.BaseDB)
+	b := NewStandardBuilder(db, db.sqlDB)
 	db.Builder = b
 	return b
 }

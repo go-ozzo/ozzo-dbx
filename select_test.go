@@ -13,7 +13,7 @@ func TestSelectQuery(t *testing.T) {
 
 	// minimal select query
 	q := db.Select().From("users").Build()
-	expected := "SELECT *\nFROM `users`"
+	expected := "SELECT * FROM `users`"
 	assertEqual(t, q.SQL(), expected, "t1")
 	assertEqual(t, len(q.Params()), 0, "t2")
 
@@ -40,7 +40,7 @@ func TestSelectQuery(t *testing.T) {
 		AndBind(Params{"age": 30}).
 		Build()
 
-	expected = "SELECT DISTINCT CALC `id`, `name`, `age`\nFROM `users`\nINNER JOIN `profile` ON user.id=profile.id\nWHERE ((age>30) AND (status=1)) OR (type=2)\nGROUP BY `id`, `age`\nHAVING ((id>10) AND (id<20)) OR (type=3)\nORDER BY `age` DESC, `type`, `id`\nLIMIT 10 OFFSET 20"
+	expected = "SELECT DISTINCT CALC `id`, `name`, `age` FROM `users` INNER JOIN `profile` ON user.id=profile.id WHERE ((age>30) AND (status=1)) OR (type=2) GROUP BY `id`, `age` HAVING ((id>10) AND (id<20)) OR (type=3) ORDER BY `age` DESC, `type`, `id` LIMIT 10 OFFSET 20"
 	assertEqual(t, q.SQL(), expected, "t3")
 	assertEqual(t, len(q.Params()), 2, "t4")
 
@@ -48,7 +48,7 @@ func TestSelectQuery(t *testing.T) {
 	q1 := db.Select().From("users").Build()
 	q2 := db.Select().From("posts").Build()
 	q = db.Select().From("profiles").Union(q1).UnionAll(q2).Build()
-	expected = "(SELECT *\nFROM `profiles`)\nUNION (SELECT *\nFROM `users`)\nUNION ALL (SELECT *\nFROM `posts`)"
+	expected = "(SELECT * FROM `profiles`) UNION (SELECT * FROM `users`) UNION ALL (SELECT * FROM `posts`)"
 	assertEqual(t, q.SQL(), expected, "t5")
 }
 
