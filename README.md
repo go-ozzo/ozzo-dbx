@@ -61,6 +61,7 @@ The following code snippet shows how you can use this package in order to access
 import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -101,6 +102,7 @@ And the following example shows how to use the query building capability of this
 import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -410,6 +412,7 @@ import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
 	"github.com/go-ozzo/ozzo-log"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
