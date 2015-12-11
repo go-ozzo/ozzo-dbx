@@ -65,9 +65,9 @@ func (s *SelectQuery) Select(cols ...string) *SelectQuery {
 	return s
 }
 
-// AddSelect adds additional columns to be selected.
+// AndSelect adds additional columns to be selected.
 // Column names will be automatically quoted.
-func (s *SelectQuery) AddSelect(cols ...string) *SelectQuery {
+func (s *SelectQuery) AndSelect(cols ...string) *SelectQuery {
 	s.selects = append(s.selects, cols...)
 	return s
 }
@@ -146,9 +146,9 @@ func (s *SelectQuery) OrderBy(cols ...string) *SelectQuery {
 	return s
 }
 
-// AddOrderBy appends additional columns to the existing ORDER BY clause.
+// AndOrderBy appends additional columns to the existing ORDER BY clause.
 // Column names will be properly quoted. A column name can contain "ASC" or "DESC" to indicate its ordering direction.
-func (s *SelectQuery) AddOrderBy(cols ...string) *SelectQuery {
+func (s *SelectQuery) AndOrderBy(cols ...string) *SelectQuery {
 	s.orderBy = append(s.orderBy, cols...)
 	return s
 }
@@ -160,9 +160,9 @@ func (s *SelectQuery) GroupBy(cols ...string) *SelectQuery {
 	return s
 }
 
-// AddGroupBy appends additional columns to the existing GROUP BY clause.
+// AndGroupBy appends additional columns to the existing GROUP BY clause.
 // Column names will be properly quoted.
-func (s *SelectQuery) AddGroupBy(cols ...string) *SelectQuery {
+func (s *SelectQuery) AndGroupBy(cols ...string) *SelectQuery {
 	s.groupBy = append(s.groupBy, cols...)
 	return s
 }
