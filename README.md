@@ -298,20 +298,29 @@ db.Select("id", "name").
 The above code will generate and execute the following SQL statement:
 
 ```sql
-SELECT `id`, `name`
-FROM `users`
-WHERE `id`={:p0}
+SELECT `id`, `name` FROM `users` WHERE `id`={:p0} 
 ```
 
 Notice how the table and column names are properly quoted according to the currently using database type.
 And parameter binding is used to populate the value of `p0` in the `WHERE` clause.
+
+Every SQL keyword has a corresponding query building method. For example, `SELECT` corresponds to `Select()`,
+`FROM` corresponds to `From()`, `WHERE` corresponds to `Where()`, and so on. You can chain these method calls
+together, just like you would do when writing a plain SQL. Each of these methods returns the query instance
+(of type `dbx.SelectQuery`) that is being built. Once you finish building a query, you may call methods such as
+`One()`, `All()` to execute the query and populate data into variables. You may also explicitly call `Build()`
+to build the query and turn it into a `dbx.Query` instance which may allow you to get the SQL statement and do
+other interesting work.
+
+
+### Building Query Conditions
 
 `dbx-ozzo` supports very flexible and powerful query condition building which can be used to build SQL clauses
 such as `WHERE`, `HAVING`, etc. For example,
 
 ```go
 // id=100
-dbx.NewExp("id={:id}", Params{"id": 100})
+dbx.NewExp("id={:id}", dbx.Params{"id": 100})
 
 // id=100 AND status=1
 dbx.HashExp{"id": 100, "status": 1}
@@ -322,6 +331,38 @@ dbx.Or(dbx.HashExp{"status": 1}, dbx.NewExp("age>30"))
 // name LIKE '%admin%' AND name LIKE '%example%'
 dbx.Like("name", "admin", "example")
 ```
+
+When building a query condition expression, its parameter values will be populated using parameter binding, which
+prevents SQL injection from happening. Also if an expression involves column names, they will be properly quoted.
+The following condition building functions are available:
+
+* `dbx.NewExp()`: creating a condition using the given expression string and binding parameters. For example,
+`dbx.NewExp("id={:id}", dbx.Params{"id":100})` would create the expression `id=100`.
+* `dbx.HashExp`: a map type that represents name-value pairs concatenated by `AND` operators. For example,
+`dbx.HashExp{"id":100, "status":1}` would create `id=100 AND status=1`.
+* `dbx.Not()`: creating a `NOT` expression by prepending `NOT` to the given expression.
+* `dbx.And()`: creating an `AND` expression by concatenating the given expressions with the `AND` operators.
+* `dbx.Or()`: creating an `OR` expression by concatenating the given expressions with the `OR` operators.
+* `dbx.In()`: creating an `IN` expression for the specified column and the range of values.
+For example, `dbx.In("age", 30, 40, 50)` would create the expression `age IN (30, 40, 50)`.
+Note that if the value range is empty, it will generate an expression representing a false value.
+* `dbx.NotIn()`: creating an `NOT IN` expression. This is very similar to `dbx.In()`. 
+* `dbx.Like()`: creating a `LIKE` expression for the specified column and the range of values. For example, 
+`dbx.Like("title", "golang", "framework")` would create the expression `title LIKE "%golang%" AND title LIKE "%framework%"`.
+You can further customize a LIKE expression by calling `Escape()` and/or `Match()` functions of the resulting expression.
+Note that if the value range is empty, it will generate an empty expression. 
+* `dbx.NotLike()`: creating a `NOT LIKE` expression. This is very similar to `dbx.Like()`.
+* `dbx.OrLike()`: creating a `LIKE` expression but concatenating different `LIKE` sub-expressions using `OR` instead of `AND`.
+* `dbx.OrNotLike()`: creating a `NOT LIKE` expression and concatenating different `NOT LIKE` sub-expressions using `OR` instead of `AND`.
+* `dbx.Exists()`: creating an `EXISTS` expression by prepending `EXISTS` to the given expression.
+* `dbx.NotExists()`: creating a `NOT EXISTS` expression by prepending `NOT EXISTS` to the given expression.
+* `dbx.Between()`: creating a `BETWEEN` expression. For example, `dbx.Between("age", 30, 40)` would create the 
+expression `age BETWEEN 30 AND 40`.
+* `dbx.NotBetween()`: creating a `NOT BETWEEN` expression. For example
+
+You may also create other convenient functions to help building query conditions, as long as the functions return
+an object implementing the `dbx.Expression` interface.
+ 
 
 ### Building Data Manipulation Queries
 
@@ -421,7 +462,8 @@ func main() {
 )
 ```
 
-And the following example shows how to use the `ozzo-log` package which allows logging message severities and categories:
+And the following example shows how to use the `ozzo-log` package which allows logging message severities and categories
+and sending logged messages to different targets (e.g. files, console window, network).
 
 ```go
 import (
