@@ -233,8 +233,8 @@ type Profile struct {
 }
 ```
 
-* `User.id`: not populated because the `db` tag is `-`;
-* `User.Type`: not populated because the field is not exported;
+* `User.id`: not populated because the field is not exported;
+* `User.Type`: not populated because the `db` tag is `-`;
 * `User.MyName`: to be populated from the `name` column, according to the `db` tag;
 * `Profile.Age`: to be populated from the `prof.age` column, since `Prof` is a named field of struct type
   and its fields will be prefixed with `prof.`.
