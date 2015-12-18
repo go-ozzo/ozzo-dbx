@@ -3,6 +3,12 @@
 [![Build Status](https://travis-ci.org/go-ozzo/ozzo-dbx.svg?branch=master)](https://travis-ci.org/go-ozzo/ozzo-dbx)
 [![GoDoc](https://godoc.org/github.com/go-ozzo/ozzo-dbx?status.png)](http://godoc.org/github.com/go-ozzo/ozzo-dbx)
 
+## Other languages
+
+[Русский](/docs/README-ru.md)
+
+## Description
+
 ozzo-dbx is a Go package that enhances the standard `database/sql` package by providing powerful data retrieval methods
 as well as DB-agnostic query building capabilities. It has the following features:
 
@@ -306,7 +312,7 @@ WHERE `id`={:p0}
 Notice how the table and column names are properly quoted according to the currently using database type.
 And parameter binding is used to populate the value of `p0` in the `WHERE` clause.
 
-`dbx-ozzo` supports very flexible and powerful query condition building which can be used to build SQL clauses
+`ozzo-dbx` supports very flexible and powerful query condition building which can be used to build SQL clauses
 such as `WHERE`, `HAVING`, etc. For example,
 
 ```go
