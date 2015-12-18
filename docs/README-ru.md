@@ -3,16 +3,16 @@
 [![Build Status](https://travis-ci.org/go-ozzo/ozzo-dbx.svg?branch=master)](https://travis-ci.org/go-ozzo/ozzo-dbx)
 [![GoDoc](https://godoc.org/github.com/go-ozzo/ozzo-dbx?status.png)](http://godoc.org/github.com/go-ozzo/ozzo-dbx)
 
-ozzo-dbx это Go-пакет, который расширяет стандартный `database/sql` пакет путем предоставления мощных методов извлечения данных,
+ozzo-dbx это Go-пакет, который расширяет стандартный пакет `database/sql`, путем предоставления мощных методов извлечения данных,
 а также позволяет использовать DB-agnostic (независимый от БД) построитель запросов. Он имеет следующие особенности:
 
-* Заполнеие данных в структуры или NullString карты
+* Заполнение данных в структуры или NullString карты
 * Именованные параметры связывания
-* DB-agnostic методы построения запросов, включая SELECT, запросы на манипуляцию с данными и запросы на манипуляцию со схемой БД
+* DB-agnostic методы построения запросов, включая SELECT, запросы на манипуляцию с данными и запросы на манипуляцию со схемой (структурой) БД
 * Мощный построитель запросов с условиями
 * Открытая архитектура, позволяющая с легкостью создавать поддержку для новых баз данных или кастомизировать текущую поддержку 
-* Логировать выполненные SQL запросы
-* Предоставляет роддержку основных реляционных баз данных
+* Логирование выполненных SQL запросов
+* Предоставляет поддержку основных реляционных баз данных
 
 ## Требования
 
@@ -26,7 +26,7 @@ Go 1.2 или выше.
 go get github.com/go-ozzo/ozzo-dbx
 ```
 
-В дополнение, установите необходимый пакт драйвера базы данных для той базы, которая будет использоваться. Пожалуйста обратитесь к 
+В дополнение, установите необходимый пакет драйвера базы данных для той базы, которая будет использоваться. Пожалуйста обратитесь к 
 [SQL database drivers](https://github.com/golang/go/wiki/SQLDrivers) для получения полного списка. Например, если вы используете
 MySQL, вы можете загрузить этот пакет:
 
@@ -55,7 +55,7 @@ import _ "github.com/go-sql-driver/mysql"
 
 ## С чего начать
 
-Представленный ниже код показывает как вы можете использовать пакет для доступа данным базы данных MySQL.
+Представленный ниже код показывает как вы можете использовать пакет для доступа к данным базы данных MySQL.
 
 ```go
 import (
@@ -70,7 +70,7 @@ func main() {
 	// создаем новый запрос
 	q := db.NewQuery("SELECT id, name FROM users LIMIT 10")
 
-	// извлекаем все строки в массив структур
+	// извлекаем все строки в срез структур
 	var users []struct {
 		ID, Name string
 	}
@@ -86,7 +86,7 @@ func main() {
 	data := dbx.NullStringMap{}
 	q.One(data)
 
-	// извлечение строки за строкой
+	// извлечение строку за строкой
 	rows2, _ := q.Rows()
 	for rows2.Next() {
 		rows2.ScanStruct(&user)
@@ -115,7 +115,7 @@ func main() {
 		Where(dbx.Like("name", "Charles")).
 		OrderBy("id")
 
-	// извлекаем все строки в массив структур
+	// извлекаем все строки в срез структур
 	var users []struct {
 		ID, Name string
 	}
@@ -131,7 +131,7 @@ func main() {
 
 ## Соединение с базой данных
 
-Для соединения с базой данных, используйте `dbx.Open()` таким же образом, как вы могли сделать это при помощи `Open()` метода в `database/sql`.
+Для соединения с базой данных, используйте `dbx.Open()` точно таким же образом, как вы могли бы сделать это при помощи `Open()` метода в `database/sql`.
 
 ```go
 db, err := dbx.Open("mysql", "user:pass@hostname/db_name")
@@ -139,12 +139,12 @@ db, err := dbx.Open("mysql", "user:pass@hostname/db_name")
 
 Метод возвращает экземпляр `dbx.DB` который можно использовать для создания и выполнения запросов к БД. Обратите внимание, 
 что метод на самом деле не устанавливает соединение до тех пор пока вы не выполните запрос с использованием экземпляра `dbx.DB`. Он так же 
-не проверяет корректность имени источника данных. Выполнните `dbx.MustOpen()` для того чтобы убедиться, что имя базы данных правильное.
+не проверяет корректность имени источника данных. Выполните `dbx.MustOpen()` для того чтобы убедиться, что имя базы данных правильное.
 
 ## Выполнение запросов
 
 Для выполнения SQL запроса, сначала создайте экземпляр `dbx.Query`, и далее создайте запрос при помощи `DB.NewQuery()` с SQL выражением, 
-которое нужно исполнить. И затем выполните `Query.Execute()` для исполнения запроса, в случае если запрос не предназначен для извлечения данных.
+которое необходимо исполнить. И затем выполните `Query.Execute()` для исполнения запроса, в случае если запрос не предназначен для извлечения данных.
 Например,
 
 ```go
@@ -157,8 +157,8 @@ result, err := q.Execute()
 
 * `Query.All()`: заполняет массив структур или `NullString` карты всеми строками результата.
 * `Query.One()`: сохраняет первую строку из результата в структуру или в `NullString` карту.
-* `Query.Row()`: заполняет список переменных первой строкой результата, каждя перменная заполняется данными одной из возвращаемых колонок.
-* `Query.Rows()`: возвращает экземпляр `dbx.Rows` для возможности извлечения данных строка за строкой.
+* `Query.Row()`: заполняет список переменных первой строкой результата, каждая перменная заполняется данными одной из возвращаемых колонок.
+* `Query.Rows()`: возвращает экземпляр `dbx.Rows` для обеспечения дальнейшей возможности извлечения данных методом строка за строкой.
 
 Например,
 
@@ -182,42 +182,40 @@ var (
 
 q := db.NewQuery("SELECT id, name FROM users LIMIT 10")
 
-// populate all rows into a User slice
+// заполняет срез User всеми строками из запроса
 err = q.All(&users)
 fmt.Println(users[0].ID, users[0].Name)
 
-// populate the first row into a User struct
+// заполняет структуру User данными из первой строки
 err = q.One(&user)
 fmt.Println(user.ID, user.Name)
 
-// populate the first row into a NullString map
+// запоминает первую строку в карту NullString
 err = q.One(&row)
 fmt.Println(row["id"], row["name"])
 
-// populate the first row into id and name
+// заполняет переменные id и name данными из первой строки
 err = q.Row(&id, &name)
 
-// populate data row by row
+// заполнят данные методом строка за строкой
 rows, _ := q.Rows()
 for rows.Next() {
 	rows.ScanMap(&row)
 }
 ```
 
-When populating a struct, the following rules are used to determine which columns should go into which struct fields:
+При заполнении структуры, данные правила используются для определения какая колонка будет сохранена в какое поле структуры:
 
-* Only exported struct fields can be populated.
-* A field receives data if its name is mapped to a column according to the field mapping function `Query.FieldMapper`.
-  The default field mapping function separates words in a field name by underscores and turns them into lower case.
-  For example, a field name `FirstName` will be mapped to the column name `first_name`, and `MyID` to `my_id`.
-* If a field has a `db` tag, the tag value will be used as the corresponding column name. If the `db` tag is a dash `-`,
-  it means the field should NOT be populated.
-* For anonymous fields that are of struct type, they will be expanded and their component fields will be populated
-  according to the rules described above.
-* For named fields that are of struct type, they will also be expanded. But their component fields will be prefixed
-  with the struct names when being populated.
+* Только экспортируемые поля структуры будут заполнены.
+* Поле принимает данные, если его имя имеет отображение к столбцу в соответствии с функцией отображения `Query.FieldMapper`.
+  Функция отображения поля по умолчанию разделяет слова в имени поля подчеркиванием и приводит их к нижнему регистру.
+  Например, поле `FirstName` будет отображено в имя столбца `first_name`, и `MyID` в `my_id`.
+* Если поле имеет `db` тег, значение тега будет использовано для опредления соответствующего имени столбца. Если `db` тег имеет `-`,
+  это обозначает, что поле НЕ будет заполнено.
+* Анонимные поля типа структуры будут расширены и будут заполнены в соответствии с правилами описанными выше.
+* Именованные поля типа структуры также будут раширяться. Но их составные поля будут иметь префикс с именем структуры при заполнении.
 
-The following example shows how fields are populated according to the rules above:
+Представленный ниже пример показывает, как поля будут заполняться в соответствии с указанными выше правилами:
 
 ```go
 type User struct {
@@ -232,21 +230,16 @@ type Profile struct {
 }
 ```
 
-* `User.id`: not populated because the `db` tag is `-`;
-* `User.Type`: not populated because the field is not exported;
-* `User.MyName`: to be populated from the `name` column, according to the `db` tag;
-* `Profile.Age`: to be populated from the `prof.age` column, since `Prof` is a named field of struct type
-  and its fields will be prefixed with `prof.`.
+* `User.id`: не будет заполнено в следствие того, что поле id не экспортируется (т.к. оно записано с маленькой буквы);
+* `User.Type`: не будет заполнено потому что поле имеет `db` тег `-`;
+* `User.MyName`: будет заполнено из столбца  `name`, в соответствии с тегом `db`;
+* `Profile.Age`: будет заполнено из столбца `prof.age`, т.к. `Prof` имя поля типа структуры и оно получит префикс `prof.`.
 
-Note that if a column in the result does not have a corresponding struct field, it will be ignored. Similarly,
-if a struct field does not have a corresponding column in the result, it will not be populated.
+Обратите внимание, что если столбец не имеет соответствующего поля в структуре, он будет проигнорирован. По аналогии, если поле структуры не имееет соответствующего столбца в результате, то оно не будет заполнено.
 
-## Binding Parameters
+## Связывание параметров
 
-A SQL statement is usually parameterized with dynamic values. For example, you may want to select the user record
-according to the user ID received from the client. Parameter binding should be used in this case, and it is almost
-always preferred for security reason. Unlike `database/sql` which does anonymous parameter binding, `ozzo-dbx` uses
-named parameter binding. For example,
+SQL запросы, как правило, имеют димамические значения. Например, вы можете выбрать запись пользоателя в соответствии с ID пользователя, полученного от клиента. ВЫ этом случае должно быть выполнено связывание параметров, и это почти всегда предпочтительно в целях обеспечения безопасности. В отличии от `database/sql` которая разрешает анонимное связывание, `ozzo-dbx` использует для связывания именованые параметры. Например,
 
 ```go
 q := db.NewQuery("SELECT id, name FROM users WHERE id={:id}")
@@ -254,11 +247,9 @@ q.Bind(dbx.Params{"id": 100})
 q.One(&user)
 ```
 
-The above example will select the user record whose `id` is 100. The method `Query.Bind()` binds a set
-of named parameters to a SQL statement which contains parameter placeholders in the format of `{:ParamName}`.
+Приведенный выше пример выберет пользователя с `id` которого 100. Метод `Query.Bind()` связывает набор из именовынных параметров с SQL запросом который содержит плейсхолдеры в формате `{:ParamName}`.
 
-If a SQL statement needs to be executed multiple times with different parameter values, it should be prepared
-to improve the performance. For example,
+Если оператор SQL должен быть выполнен несколько раз с различными параметрами, он должен быть подготовлен для увеличения производительности. Например,
 
 ```go
 q := db.NewQuery("SELECT id, name FROM users WHERE id={:id}")
@@ -273,18 +264,15 @@ q.One(&user)
 // ...
 ```
 
-Note that anonymous parameter binding is not supported as it will mess up with named parameters.
+Обратите внимание, что анонимные параметры не поддерживаются, т.к. это внесет беспорядок в именованное связывание.
 
-## Building Queries
+## Построение запросов
 
-Instead of writing plain SQLs, `ozzo-dbx` allows you to build SQLs programmatically, which often leads to cleaner,
-more secure, and DB-agnostic code. You can build three types of queries: the SELECT queries, the data manipulation
-queries, and the schema manipulation queries.
+Вместо того чтобы писать обычные SQLs запросы, `ozzo-dbx` позволяет строить SQLs программно, что чаще всего приводит к чистоте кода и большей защищенности, а так же коду не зависимому от используемой базы данных. Вы можете построить три типа запросов: SELECT запросы, запросы для манипуляции с данными и и запросы на манипуляцию со схемой БД.
 
-### Building SELECT Queries
+### Построение SELECT запросов
 
-Building a SELECT query starts by calling `DB.Select()`. You can build different clauses of a SELECT query using
-the corresponding query building methods. For example,
+Построение SELECT запроса начинается с вызова `DB.Select()`. Вы можете использовать различные условия для SELECT запросов используя соответствующие методы построения запросов. Например,
 
 ```go
 db, _ := dbx.Open("mysql", "user:pass@/example")
@@ -294,23 +282,27 @@ db.Select("id", "name").
 	One(&user)
 ```
 
-The above code will generate and execute the following SQL statement:
+Приведенный выше код будет генерировать следующий SQL запрос:
 
 ```sql
-SELECT `id`, `name`
-FROM `users`
-WHERE `id`={:p0}
+SELECT `id`, `name` FROM `users` WHERE `id`={:p0}
 ```
 
-Notice how the table and column names are properly quoted according to the currently using database type.
-And parameter binding is used to populate the value of `p0` in the `WHERE` clause.
+Обратите внимание, что название таблицы и имена стобцов заключены в правильные кавычки в сосответствии с типом используемой базы данных.
+И параметр подстановки значения `p0` используется в условии `WHERE`.
 
-`dbx-ozzo` supports very flexible and powerful query condition building which can be used to build SQL clauses
-such as `WHERE`, `HAVING`, etc. For example,
+Каждое ключевое слово SQL имеет свой соответствующий метод в построителе запросов. Например, `SELECT` соответствет `Select()`,
+`FROM` соответствует `From()`, `WHERE` соответствует `Where()`, и так далее. Вы можете использовать эти методы совместно, как и в обычном SQL запросе. Каждый из этих методов возвращает экземпляр запроса (типа `dbx.SelectQuery`) который строится. 
+Как только вы закончите построения запроса, вы можете вызвать методы, такие как `One()`, `All()` для выполнения запроса и и сохранения данных в переменные. Также вы можете явно вызвать `Build()` для построения запроса и превратить его в экземпляр `dbx.Query` что может помоч вам получить SQL выражение и делать другую интересную работу.
+
+### Построение условий запроса
+
+`dbx-ozzo` поддерживает очень гибкий и мощный построитель условий запроса, который может быть использован для SQL выражений
+таких как `WHERE`, `HAVING`, и т.д. Например,
 
 ```go
 // id=100
-dbx.NewExp("id={:id}", Params{"id": 100})
+dbx.NewExp("id={:id}", dbx.Params{"id": 100})
 
 // id=100 AND status=1
 dbx.HashExp{"id": 100, "status": 1}
@@ -322,10 +314,39 @@ dbx.Or(dbx.HashExp{"status": 1}, dbx.NewExp("age>30"))
 dbx.Like("name", "admin", "example")
 ```
 
-### Building Data Manipulation Queries
+При построении выражения условия в запросе, значение его параметров будет заполнено с помощью параметрического связывания, которое предотвращает использование SQL инекции.Кроме тогог, если выраждение имеет имена столбцов, они будут правильно квотированы.
+Доступны слудующие функции для построениея условий:
 
-Data manipulation queries are those changing the data in the database, such as INSERT, UPDATE, DELETE statements.
-Such queries can be built by calling the corresponding methods of `DB`. For example,
+* `dbx.NewExp()`: создает условие для используя данное строковое выражение и связываемый параметр. Например,
+`dbx.NewExp("id={:id}", dbx.Params{"id":100})` создаст выражение `id=100`.
+* `dbx.HashExp`: подставляет пары имя:значение в `AND` оператор. Например,
+`dbx.HashExp{"id":100, "status":1}` создает `id=100 AND status=1`.
+* `dbx.Not()`: создает `NOT` выражение подставляя `NOT` в заданное выражение.
+* `dbx.And()`: создает `AND` выражение путем объединения заданных выражений при помощи `AND` оператора.
+* `dbx.Or()`: создает выражение `OR` путем объединения заданных выражений при помощи оператора `OR`.
+* `dbx.In()`: создание `IN` выражения для указанного столбца и диапазона зачений.
+Например, `dbx.In("age", 30, 40, 50)` создаст выражение `age IN (30, 40, 50)`.
+Обратите внимание, что, если диапазон значений пуст, он будет генерировать выражение, представляющее ложное значение.
+* `dbx.NotIn()`: создает `NOT IN` выражение. Что очень похоже на `dbx.In()`. 
+* `dbx.Like()`: создает `LIKE` выражение для указанного столбца и диапазона значений. Например, 
+`dbx.Like("title", "golang", "framework")` создаст выражение `title LIKE "%golang%" AND title LIKE "%framework%"`.
+Вы можете дополнить LIKE выражение при помощи `Escape()` и/или `Match()` функции полученного выражения.
+Обратите внимание, что, если диапазон значений пуст, он будет генерировать пустое выражение. 
+* `dbx.NotLike()`: создает `NOT LIKE` выражение. Что очень похоже на `dbx.Like()`.
+* `dbx.OrLike()`: создает `LIKE` выражение объединением различных `LIKE` подвыражений при помощи `OR` вместо `AND`.
+* `dbx.OrNotLike()`: создает `NOT LIKE` выражение путем объединения `NOT LIKE` выражений используя `OR` вместо `AND`.
+* `dbx.Exists()`: создает `EXISTS` выражение путем добавления `EXISTS` к заданному выражению.
+* `dbx.NotExists()`: Создает `NOT EXISTS` выражение путем добавления `NOT EXISTS` к заданному выражению.
+* `dbx.Between()`: создает `BETWEEN` выражение. Например, `dbx.Between("age", 30, 40)`создает выражение `age BETWEEN 30 AND 40`.
+* `dbx.NotBetween()`: создает `NOT BETWEEN` выражение. Например
+
+Вы также можете создавать другие удобные функции для помощи в построении условных запросов, таким образом, чтобы функция возвращала 
+объект реализующий интерфейс `dbx.Expression`.
+
+### Построение запросов для манипуляции с данными
+
+Запросы манипуляции с данными это запросы которые изменяют данные в базе данных, такие как INSERT, UPDATE, DELETE операторы.
+Такие запросы могут быть построены путем вызова соответствующих методов `DB`. Например,
 
 ```go
 db, _ := dbx.Open("mysql", "user:pass@/example")
@@ -343,12 +364,12 @@ db.Update("users", dbx.Params{"status": 1}, dbx.HashExp{"id": 100}).Execute()
 db.Delete("users", dbx.HashExp{"status": 2}).Execute()
 ```
 
-When building data manipulation queries, remember to call `Execute()` at the end to execute the queries.
+При построении запросов на манипуляцию с данными, не забудьте  использовать `Execute()` в конце для выполнения запроса.
 
-### Building Schema Manipulation Queries
+### Построение запросов для работы со схемой БД
 
-Schema manipulation queries are those changing the database schema, such as creating a new table, adding a new column.
-These queries can be built by calling the corresponding methods of `DB`. For example,
+Запросы для манипулирования со схемой БД изменяют структуру БД, то есть создают новую таблицу, добавляют новый столбец и т.д.
+Эти запросы могут быть построены путем вызова соответствующих методов `DB`. Например,
 
 ```go
 db, _ := dbx.Open("mysql", "user:pass@/example")
@@ -361,25 +382,21 @@ q := db.CreateTable("users", map[string]string{
 q.Execute()
 ```
 
-## Quoting Table and Column Names
+## Заключение в кавычки названия таблиц и столбцов
 
-Databases vary in quoting table and column names. To allow writing DB-agnostic SQLs, ozzo-dbx introduces a special
-syntax in quoting table and column names. A word enclosed within `{{` and `}}` is treated as a table name and will
-be quoted according to the particular DB driver. Similarly, a word enclosed within `[[` and `]]` is treated as a 
-column name and will be quoted accordingly as well. For example, when working with a MySQL database, the following
-query will be properly quoted:
+Различные базы данных по разному заключают в кавычки (цитируют) название таблиц и названия столбцов. Для возможности писать SQL запросы независимые от БД (DB-agnostic SQLs), ozzo-dbx предоставляет специальный синтакс для квотирования имен таблиц и столбцов. AСлово заключенное в `{{` и `}}` трактуется как имя таблицы и будет квотировано в соответствии от текущего драйвера БД. подобным образом слово заключенное в `[[` и `]]` трактуется как имя столбца и также будет правильно квотировано. Например, при работе с базой данных MySQL, следующий запрос будет должным образом квотирован:
 
 ```go
 // SELECT * FROM `users` WHERE `status`=1
 q := db.NewQuery("SELECT * FROM {{users}} WHERE [[status]]=1")
 ```
 
-Note that if a table or column name contains a prefix, it will still be properly quoted. For example, `{{public.users}}`
-will be quoted as `"public"."users"` for PostgreSQL.
+Обратите внимание, что если имя таблицы или столбца содержит префикс, он все равно будет правильно проквотирован. Например, `{{public.users}}`
+будет проквотирован как `"public"."users"` для PostgreSQL.
 
-## Using Transactions
+## Использование транзакций
 
-You can use all aforementioned query execution and building methods with transaction. For example,
+ВЫ можете использовать все возможные методы для выполнения запросов с использованием транзакций. Например,
 
 ```go
 db, _ := dbx.Open("mysql", "user:pass@/example")
@@ -400,10 +417,10 @@ if err1 == nil && err2 == nil {
 }
 ```
 
-## Logging Executed SQL Statements
+## Логирование исполеннных SQL запросов
 
-When `DB.LogFunc` is configured with a compatible log function, all SQL statements being executed will be logged.
-The following example shows how to configure the logger using the standard `log` package:
+Когда `DB.LogFunc` настроен для логирования, все SQL будут выполены и сохранены в лог.
+В следующем примере показано как сконфигурировать логгер для использования стандартного `log` пакета:
 
 ```go
 import (
@@ -420,7 +437,8 @@ func main() {
 )
 ```
 
-And the following example shows how to use the `ozzo-log` package which allows logging message severities and categories:
+А этот пример показывет как испольтзовать `ozzo-log` пакет, который позволяет использовать уровни важности и категории,
+а также отправлять сообщения различным получателям (таким как файлы, окно консоли, сетевое устройство).:
 
 ```go
 import (
@@ -442,12 +460,11 @@ func main() {
 )
 ```
 
-## Supporting New Databases
+## Поддержка дополнительных баз данных
 
-While `ozzo-dbx` provides out-of-box support for most major relational databases, its open architecture
-allows you to add support for new databases. The effort of adding support for a new database involves:
+Не смотря на то, что `ozzo-dbx` "из коробки" предоставляет поддержку всех основных реляционных баз данных , его окрытая прхитектура
+позволяет вам добавлять поддержку новых баз данных. Действия для добавления новой базы данных включают в себя:
 
-* Create a struct that implements the `QueryBuilder` interface. You may use `BaseQueryBuilder` directly or extend it
-  via composition.
-* Create a struct that implements the `Builder` interface. You may extend `BaseBuilder` via composition.
-* Write an `init()` function to register the new builder in `dbx.BuilderFuncMap`.
+* создание структуры, которая имплементирует `QueryBuilder` интерфейс. Вы можете использовать `BaseQueryBuilder` прямо или расширить его функциональность.
+* Создать структуру которая имплементирует `Builder` интерфейс. Вы можете расширить `BaseBuilder` помощью композиции.
+* Напишите `init()` функцию для регистрации нового построителя в `dbx.BuilderFuncMap`.
