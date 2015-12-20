@@ -99,6 +99,7 @@ func (q *Query) Params() Params {
 }
 
 // Prepare creates a prepared statement for later queries or executions.
+// Close() should be called after finishing all queries.
 func (q *Query) Prepare() *Query {
 	stmt, err := q.executor.Prepare(q.rawSQL)
 	if err != nil {

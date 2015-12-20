@@ -10,7 +10,7 @@
 ## Description
 
 ozzo-dbx is a Go package that enhances the standard `database/sql` package by providing powerful data retrieval methods
-as well as DB-agnostic query building capabilities. It has the following features:
+as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It has the following features:
 
 * Populating data into structs and NullString maps
 * Named parameter binding
@@ -252,8 +252,9 @@ if a struct field does not have a corresponding column in the result, it will no
 
 A SQL statement is usually parameterized with dynamic values. For example, you may want to select the user record
 according to the user ID received from the client. Parameter binding should be used in this case, and it is almost
-always preferred for security reason. Unlike `database/sql` which does anonymous parameter binding, `ozzo-dbx` uses
-named parameter binding. For example,
+always preferred to prevent from SQL injection attacks. Unlike `database/sql` which does anonymous parameter binding, 
+`ozzo-dbx` uses named parameter binding. *Anonymous parameter binding is not supported*, as it will mess up with named
+parameters. For example,
 
 ```go
 q := db.NewQuery("SELECT id, name FROM users WHERE id={:id}")
@@ -264,12 +265,13 @@ q.One(&user)
 The above example will select the user record whose `id` is 100. The method `Query.Bind()` binds a set
 of named parameters to a SQL statement which contains parameter placeholders in the format of `{:ParamName}`.
 
-If a SQL statement needs to be executed multiple times with different parameter values, it should be prepared
+If a SQL statement needs to be executed multiple times with different parameter values, it may be prepared
 to improve the performance. For example,
 
 ```go
 q := db.NewQuery("SELECT id, name FROM users WHERE id={:id}")
 q.Prepare()
+defer q.Close()
 
 q.Bind(dbx.Params{"id": 100})
 q.One(&user)
@@ -279,8 +281,6 @@ q.One(&user)
 
 // ...
 ```
-
-Note that anonymous parameter binding is not supported as it will mess up with named parameters.
 
 ## Building Queries
 
