@@ -48,7 +48,7 @@ import _ "github.com/go-sql-driver/mysql"
 
 ## Supported Databases
 
-The following databases are supported out of box:
+The following databases are fully supported out of box:
 
 * SQLite
 * MySQL
@@ -56,8 +56,8 @@ The following databases are supported out of box:
 * MS SQL Server (2012 or above)
 * Oracle
 
-Other databases may also work. If not, you may create a builder for it, as explained later in this document. 
-
+For other databases, the query building feature may not work as expected. You can create a custom builder to
+solve the problem. Please see the last section for more details.
 
 ## Getting Started
 
@@ -493,7 +493,7 @@ func main() {
 
 ## Supporting New Databases
 
-While `ozzo-dbx` provides out-of-box support for most major relational databases, its open architecture
+While `ozzo-dbx` provides out-of-box query building support for most major relational databases, its open architecture
 allows you to add support for new databases. The effort of adding support for a new database involves:
 
 * Create a struct that implements the `QueryBuilder` interface. You may use `BaseQueryBuilder` directly or extend it
