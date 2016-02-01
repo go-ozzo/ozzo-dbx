@@ -62,7 +62,6 @@ func (b *MssqlBuilder) AlterColumn(table, col, typ string) *Query {
 	return b.NewQuery(sql)
 }
 
-
 func (q *MssqlQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
 	orderBy := q.BuildOrderBy(cols)
 	if limit < 0 && offset < 0 {

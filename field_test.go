@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"testing"
-	"reflect"
 	"encoding/json"
+	"reflect"
+	"testing"
 )
 
 func TestDefaultFieldMapFunc(t *testing.T) {
@@ -50,9 +50,9 @@ func TestGetFieldMap(t *testing.T) {
 		X1 string
 		FA
 		X2 int
-		B *FB
+		B  *FB
 		FB `db:"c"`
-		c int
+		c  int
 	}
 	ta := reflect.TypeOf(a)
 	r := getFieldMap(ta, DefaultFieldMapFunc)

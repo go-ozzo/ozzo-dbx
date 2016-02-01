@@ -7,8 +7,8 @@ package dbx
 import (
 	"database/sql"
 	"errors"
-	"strings"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -28,33 +28,33 @@ type Executor interface {
 
 // Query represents a SQL statement to be executed.
 type Query struct {
-	executor     Executor
+	executor Executor
 
 	sql, rawSQL  string
 	placeholders []string
 	params       Params
 
-	stmt         *sql.Stmt
+	stmt *sql.Stmt
 
 	// FieldMapper maps struct field names to DB column names.
-	FieldMapper  FieldMapFunc
+	FieldMapper FieldMapFunc
 	// LastError contains the last error (if any) of the query.
-	LastError    error
+	LastError error
 	// LogFunc is used to log the SQL statement being executed.
-	LogFunc      LogFunc
+	LogFunc LogFunc
 }
 
 // NewQuery creates a new Query with the given SQL statement.
 func NewQuery(db *DB, executor Executor, sql string) *Query {
 	rawSQL, placeholders := db.processSQL(sql)
 	return &Query{
-		executor: executor,
-		sql: sql,
-		rawSQL: rawSQL,
+		executor:     executor,
+		sql:          sql,
+		rawSQL:       rawSQL,
 		placeholders: placeholders,
-		params: Params{},
-		FieldMapper: db.FieldMapper,
-		LogFunc: db.LogFunc,
+		params:       Params{},
+		FieldMapper:  db.FieldMapper,
+		LogFunc:      db.LogFunc,
 	}
 }
 
@@ -78,7 +78,7 @@ func (q *Query) logSQL() string {
 		} else {
 			sv = fmt.Sprintf("%v", v)
 		}
-		s = strings.Replace(s, "{:" + k + "}", sv, -1)
+		s = strings.Replace(s, "{:"+k+"}", sv, -1)
 	}
 	return s
 }

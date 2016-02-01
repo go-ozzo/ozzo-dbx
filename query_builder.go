@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"strings"
-	"regexp"
 	"fmt"
+	"regexp"
+	"strings"
 )
 
 // QueryBuilder builds different clauses for a SELECT SQL statement.
@@ -202,7 +202,7 @@ func (q *BaseQueryBuilder) BuildOrderBy(cols []string) string {
 func (q *BaseQueryBuilder) BuildLimit(limit int64, offset int64) string {
 	if limit < 0 && offset > 0 {
 		// most DBMS requires LIMIT when OFFSET is present
-		limit = 9223372036854775807  // 2^63 - 1
+		limit = 9223372036854775807 // 2^63 - 1
 	}
 
 	sql := ""

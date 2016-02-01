@@ -6,9 +6,9 @@ package dbx
 
 import (
 	"reflect"
-	"sync"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 const dbTag = "db"
@@ -23,7 +23,7 @@ type fieldMapKey struct {
 
 var (
 	muFieldMap sync.Mutex
-	fieldMap = make(map[fieldMapKey]map[string][]int)
+	fieldMap   = make(map[fieldMapKey]map[string][]int)
 	fieldRegex = regexp.MustCompile(`([^A-Z_])([A-Z])`)
 )
 
@@ -68,7 +68,7 @@ func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string]
 			continue
 		}
 
-		path2 := make([]int, len(path), len(path) + 1)
+		path2 := make([]int, len(path), len(path)+1)
 		copy(path2, path)
 		path2 = append(path2, i)
 
@@ -87,7 +87,7 @@ func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string]
 		if ft.Kind() != reflect.Struct {
 			if name != "" {
 				if prefix != "" {
-					fields[prefix + "." + name] = path2
+					fields[prefix+"."+name] = path2
 				} else {
 					fields[name] = path2
 				}

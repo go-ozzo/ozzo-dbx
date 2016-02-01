@@ -36,7 +36,7 @@ func TestStandardBuilder_Insert(t *testing.T) {
 	b := getStandardBuilder()
 	q := b.Insert("users", Params{
 		"name": "James",
-		"age": 30,
+		"age":  30,
 	})
 	assertEqual(t, q.SQL(), `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1})`, "t1")
 	assertEqual(t, q.Params()["p0"], 30, "t2")
@@ -50,7 +50,7 @@ func TestStandardBuilder_Update(t *testing.T) {
 	b := getStandardBuilder()
 	q := b.Update("users", Params{
 		"name": "James",
-		"age": 30,
+		"age":  30,
 	}, NewExp("id=10"))
 	assertEqual(t, q.SQL(), `UPDATE "users" SET "age"={:p0}, "name"={:p1} WHERE id=10`, "t1")
 	assertEqual(t, q.Params()["p0"], 30, "t2")
@@ -58,7 +58,7 @@ func TestStandardBuilder_Update(t *testing.T) {
 
 	q = b.Update("users", Params{
 		"name": "James",
-		"age": 30,
+		"age":  30,
 	}, nil)
 	assertEqual(t, q.SQL(), `UPDATE "users" SET "age"={:p0}, "name"={:p1}`, "t2")
 }
@@ -74,7 +74,7 @@ func TestStandardBuilder_Delete(t *testing.T) {
 func TestStandardBuilder_CreateTable(t *testing.T) {
 	b := getStandardBuilder()
 	q := b.CreateTable("users", map[string]string{
-		"id": "int primary key",
+		"id":   "int primary key",
 		"name": "varchar(255)",
 	}, "ON DELETE CASCADE")
 	assertEqual(t, q.SQL(), "CREATE TABLE \"users\" (\"id\" int primary key, \"name\" varchar(255)) ON DELETE CASCADE", "t1")

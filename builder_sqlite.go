@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"strings"
-	"fmt"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 // SqliteBuilder is the builder for SQLite databases.
@@ -36,7 +36,7 @@ func (b *SqliteBuilder) QuoteSimpleTableName(s string) string {
 }
 
 func (b *SqliteBuilder) QuoteSimpleColumnName(s string) string {
-	if strings.Contains(s, "`") || s == "*"{
+	if strings.Contains(s, "`") || s == "*" {
 		return s
 	}
 	return "`" + s + "`"

@@ -32,7 +32,7 @@ func TestHashExp(t *testing.T) {
 		"k5": []interface{}{1, 2},
 	}
 	db := getDB()
-	params := Params{"k0":"v0"}
+	params := Params{"k0": "v0"}
 	expected := "`k1` IS NULL AND (s1) AND `k3`={:p2} AND `k4`={:p3} AND `k5` IN ({:p4}, {:p5})"
 
 	assertEqual(t, e2.Build(db, params), expected, `e2.Build()`)

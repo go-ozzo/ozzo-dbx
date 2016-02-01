@@ -183,7 +183,7 @@ func TestQB_BuildJoin(t *testing.T) {
 	qb := getDB().QueryBuilder()
 
 	params := Params{}
-	ji := JoinInfo{"LEFT JOIN", "users u", NewExp("id=u.id", Params{"id":1})}
+	ji := JoinInfo{"LEFT JOIN", "users u", NewExp("id=u.id", Params{"id": 1})}
 	sql := qb.BuildJoin([]JoinInfo{ji}, params)
 	expected := "LEFT JOIN `users` `u` ON id=u.id"
 	assertEqual(t, sql, expected, "BuildJoin@1")
@@ -212,7 +212,7 @@ func TestQB_BuildUnion(t *testing.T) {
 	qb := db.QueryBuilder()
 
 	params := Params{}
-	ui := UnionInfo{false, db.NewQuery("SELECT names").Bind(Params{"id":1})}
+	ui := UnionInfo{false, db.NewQuery("SELECT names").Bind(Params{"id": 1})}
 	sql := qb.BuildUnion([]UnionInfo{ui}, params)
 	expected := "UNION (SELECT names)"
 	assertEqual(t, sql, expected, "BuildUnion@1")

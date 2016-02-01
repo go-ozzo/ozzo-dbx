@@ -44,9 +44,9 @@ func Example_2() {
 	// build a SELECT query
 	//   SELECT `id`, `name` FROM `users` WHERE `name` LIKE '%Charles%' ORDER BY `id`
 	q := db.Select("id", "name").
-	From("users").
-	Where(dbx.Like("name", "Charles")).
-	OrderBy("id")
+		From("users").
+		Where(dbx.Like("name", "Charles")).
+		OrderBy("id")
 
 	// fetch all rows into a struct array
 	var users []struct {
@@ -86,7 +86,7 @@ func ExampleSchemaBuilder() {
 
 	db.Insert("users", dbx.Params{
 		"name": "James",
-		"age": 30,
+		"age":  30,
 	}).Execute()
 }
 
@@ -158,7 +158,7 @@ func ExampleQuery_Row() {
 
 	// fetches data into a struct
 	var (
-		id int
+		id   int
 		name string
 	)
 	db.NewQuery(sql).Row(&id, &name)

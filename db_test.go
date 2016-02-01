@@ -5,16 +5,16 @@
 package dbx
 
 import (
-	"testing"
+	"bytes"
+	"encoding/json"
+	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"strings"
-	"encoding/json"
-	"bytes"
-	_ "github.com/go-sql-driver/mysql"
+	"testing"
 )
 
 const (
-	TestDSN = "travis:@/ozzo_dbx_test"
+	TestDSN     = "travis:@/ozzo_dbx_test"
 	FixtureFile = "testdata/mysql.sql"
 )
 
@@ -171,8 +171,8 @@ func TestDB_Begin(t *testing.T) {
 
 	var (
 		lastID int
-		name string
-		tx *Tx
+		name   string
+		tx     *Tx
 	)
 	db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
 

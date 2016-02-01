@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"strings"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Expression represents a DB expression that can be embedded in a SQL statement.
@@ -78,12 +78,12 @@ var DefaultLikeEscape = []string{"\\", "\\\\", "%", "\\%", "_", "\\_"}
 // generates "name" LIKE "key%".
 func Like(col string, values ...string) *LikeExp {
 	return &LikeExp{
-		left: true,
-		right: true,
-		col: col,
+		left:   true,
+		right:  true,
+		col:    col,
 		values: values,
 		escape: DefaultLikeEscape,
-		Like: "LIKE",
+		Like:   "LIKE",
 	}
 }
 
@@ -92,12 +92,12 @@ func Like(col string, values ...string) *LikeExp {
 // "name" NOT LIKE "%key%" AND "name" NOT LIKE "%word%". Please see Like() for more details.
 func NotLike(col string, values ...string) *LikeExp {
 	return &LikeExp{
-		left: true,
-		right: true,
-		col: col,
+		left:   true,
+		right:  true,
+		col:    col,
 		values: values,
 		escape: DefaultLikeEscape,
-		Like: "NOT LIKE",
+		Like:   "NOT LIKE",
 	}
 }
 
@@ -107,13 +107,13 @@ func NotLike(col string, values ...string) *LikeExp {
 // "name" LIKE "%key%" OR "name" LIKE "%word%". Please see Like() for more details.
 func OrLike(col string, values ...string) *LikeExp {
 	return &LikeExp{
-		or: true,
-		left: true,
-		right: true,
-		col: col,
+		or:     true,
+		left:   true,
+		right:  true,
+		col:    col,
 		values: values,
 		escape: DefaultLikeEscape,
-		Like: "LIKE",
+		Like:   "LIKE",
 	}
 }
 
@@ -122,13 +122,13 @@ func OrLike(col string, values ...string) *LikeExp {
 // "name" NOT LIKE "%key%" OR "name" NOT LIKE "%word%". Please see Like() for more details.
 func OrNotLike(col string, values ...string) *LikeExp {
 	return &LikeExp{
-		or: true,
-		left: true,
-		right: true,
-		col: col,
+		or:     true,
+		left:   true,
+		right:  true,
+		col:    col,
 		values: values,
 		escape: DefaultLikeEscape,
-		Like: "NOT LIKE",
+		Like:   "NOT LIKE",
 	}
 }
 
@@ -188,10 +188,10 @@ func (e HashExp) Build(db *DB, params Params) string {
 		switch value.(type) {
 		case nil:
 			name = db.QuoteColumnName(name)
-			parts = append(parts, name + " IS NULL")
+			parts = append(parts, name+" IS NULL")
 		case Expression:
 			if sql := value.(Expression).Build(db, params); sql != "" {
-				parts = append(parts, "(" + sql + ")")
+				parts = append(parts, "("+sql+")")
 			}
 		case []interface{}:
 			in := In(name, value.([]interface{})...)
@@ -201,7 +201,7 @@ func (e HashExp) Build(db *DB, params Params) string {
 		default:
 			pn := fmt.Sprintf("p%v", len(params))
 			name = db.QuoteColumnName(name)
-			parts = append(parts, name + "={:" + pn + "}")
+			parts = append(parts, name+"={:"+pn+"}")
 			params[pn] = value
 		}
 	}
@@ -246,7 +246,7 @@ func (e *AndOrExp) Build(db *DB, params Params) string {
 	if len(parts) == 1 {
 		return parts[0]
 	}
-	return "(" + strings.Join(parts, ") " + e.op + " (") + ")"
+	return "(" + strings.Join(parts, ") "+e.op+" (") + ")"
 }
 
 // InExp represents an "IN" or "NOT IN" expression.
@@ -275,7 +275,7 @@ func (e *InExp) Build(db *DB, params Params) string {
 		default:
 			name := fmt.Sprintf("p%v", len(params))
 			params[name] = value
-			values = append(values, "{:" + name + "}")
+			values = append(values, "{:"+name+"}")
 		}
 	}
 	col := db.QuoteColumnName(e.col)
@@ -302,7 +302,7 @@ type LikeExp struct {
 
 	// Like stores the LIKE operator. It can be "LIKE", "NOT LIKE".
 	// It may also be customized as something like "ILIKE".
-	Like        string
+	Like string
 }
 
 // Escape specifies how a LIKE expression should be escaped.
@@ -324,7 +324,7 @@ func (e *LikeExp) Build(db *DB, params Params) string {
 		return ""
 	}
 
-	if len(e.escape) % 2 != 0 {
+	if len(e.escape)%2 != 0 {
 		panic("LikeExp.Escape must be a slice of even number of strings")
 	}
 
@@ -333,7 +333,7 @@ func (e *LikeExp) Build(db *DB, params Params) string {
 	for _, value := range e.values {
 		name := fmt.Sprintf("p%v", len(params))
 		for i := 0; i < len(e.escape); i += 2 {
-			value = strings.Replace(value, e.escape[i], e.escape[i + 1], -1)
+			value = strings.Replace(value, e.escape[i], e.escape[i+1], -1)
 		}
 		if e.left {
 			value = "%" + value
@@ -384,7 +384,7 @@ func (e *BetweenExp) Build(db *DB, params Params) string {
 		between = "NOT BETWEEN"
 	}
 	name1 := fmt.Sprintf("p%v", len(params))
-	name2 := fmt.Sprintf("p%v", len(params) + 1)
+	name2 := fmt.Sprintf("p%v", len(params)+1)
 	params[name1] = e.from
 	params[name2] = e.to
 	col := db.QuoteColumnName(e.col)

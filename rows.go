@@ -172,7 +172,6 @@ func (r *Rows) one(a interface{}) error {
 		rt = reflect.TypeOf(a)
 	}
 
-
 	if rt.Kind() == reflect.Map {
 		v, ok := a.(NullStringMap)
 		if !ok {

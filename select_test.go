@@ -19,7 +19,7 @@ func TestSelectQuery(t *testing.T) {
 
 	// a full select query
 	q = db.Select("id", "name").
-	AndSelect("age").
+		AndSelect("age").
 		Distinct(true).
 		SelectOption("CALC").
 		From("users").
@@ -28,9 +28,9 @@ func TestSelectQuery(t *testing.T) {
 		OrWhere(NewExp("type=2")).
 		InnerJoin("profile", NewExp("user.id=profile.id")).
 		OrderBy("age DESC", "type").
-	AndOrderBy("id").
+		AndOrderBy("id").
 		GroupBy("id").
-	AndGroupBy("age").
+		AndGroupBy("age").
 		Having(NewExp("id>10")).
 		AndHaving(NewExp("id<20")).
 		OrHaving(NewExp("type=3")).

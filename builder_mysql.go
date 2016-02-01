@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"strings"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // MysqlBuilder is the builder for MySQL databases.
@@ -36,7 +36,7 @@ func (b *MysqlBuilder) QuoteSimpleTableName(s string) string {
 }
 
 func (b *MysqlBuilder) QuoteSimpleColumnName(s string) string {
-	if strings.Contains(s, "`") || s == "*"{
+	if strings.Contains(s, "`") || s == "*" {
 		return s
 	}
 	return "`" + s + "`"
@@ -46,7 +46,7 @@ func (b *MysqlBuilder) RenameColumn(table, oldName, newName string) *Query {
 	qt := b.db.QuoteTableName(table)
 	sql := fmt.Sprintf("ALTER TABLE %v CHANGE %v %v", qt, b.db.QuoteColumnName(oldName), b.db.QuoteColumnName(newName))
 
-	var info struct{
+	var info struct {
 		SQL string `db:"Create Table"`
 	}
 	if err := b.db.NewQuery("SHOW CREATE TABLE " + qt).One(&info); err != nil {

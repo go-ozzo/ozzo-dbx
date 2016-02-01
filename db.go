@@ -7,8 +7,8 @@ package dbx
 
 import (
 	"database/sql"
-	"strings"
 	"regexp"
+	"strings"
 )
 
 // LogFunc logs a message for each SQL statement being executed.
@@ -25,10 +25,10 @@ type DB struct {
 	// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
 	FieldMapper FieldMapFunc
 	// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
-	LogFunc     LogFunc
+	LogFunc LogFunc
 
-	sqlDB       *sql.DB
-	driverName  string
+	sqlDB      *sql.DB
+	driverName string
 }
 
 // BuilderFunc creates a Builder instance using the given DB instance and Executor.
@@ -38,12 +38,12 @@ type BuilderFunc func(*DB, Executor) Builder
 // You may modify this variable to add the builder support for a new DB driver.
 // If a DB driver is not listed here, the StandardBuilder will be used.
 var BuilderFuncMap = map[string]BuilderFunc{
-	"sqlite3": NewSqliteBuilder,
-	"mysql": NewMysqlBuilder,
+	"sqlite3":  NewSqliteBuilder,
+	"mysql":    NewMysqlBuilder,
 	"postgres": NewPgsqlBuilder,
-	"pgx": NewPgsqlBuilder,
-	"mssql": NewMssqlBuilder,
-	"oci8": NewOciBuilder,
+	"pgx":      NewPgsqlBuilder,
+	"mssql":    NewMssqlBuilder,
+	"oci8":     NewOciBuilder,
 }
 
 // Open opens a database specified by a driver name and data source name (DSN).
@@ -56,8 +56,8 @@ func Open(driverName, dsn string) (*DB, error) {
 	}
 
 	db := &DB{
-		driverName: driverName,
-		sqlDB: sqlDB,
+		driverName:  driverName,
+		sqlDB:       sqlDB,
 		FieldMapper: DefaultFieldMapFunc,
 	}
 	db.Builder = db.newBuilder(db.sqlDB)
@@ -131,13 +131,13 @@ func (db *DB) QuoteColumnName(s string) string {
 	prefix := ""
 	if pos := strings.LastIndex(s, "."); pos != -1 {
 		prefix = db.QuoteTableName(s[:pos]) + "."
-		s = s[pos + 1:]
+		s = s[pos+1:]
 	}
 	return prefix + db.QuoteSimpleColumnName(s)
 }
 
 var (
-	plRegex = regexp.MustCompile(`\{:\w+\}`)
+	plRegex    = regexp.MustCompile(`\{:\w+\}`)
 	quoteRegex = regexp.MustCompile(`(\{\{[\w\-\. ]+\}\}|\[\[[\w\-\. ]+\]\])`)
 )
 
@@ -149,14 +149,14 @@ func (db *DB) processSQL(s string) (string, []string) {
 	count := 0
 	s = plRegex.ReplaceAllStringFunc(s, func(m string) string {
 		count++
-		placeholders = append(placeholders, m[2:len(m) - 1])
+		placeholders = append(placeholders, m[2:len(m)-1])
 		return db.GeneratePlaceholder(count)
 	})
 	s = quoteRegex.ReplaceAllStringFunc(s, func(m string) string {
 		if m[0] == '{' {
-			return db.QuoteTableName(m[2:len(m) - 2])
+			return db.QuoteTableName(m[2 : len(m)-2])
 		} else {
-			return db.QuoteColumnName(m[2:len(m) - 2])
+			return db.QuoteColumnName(m[2 : len(m)-2])
 		}
 	})
 	return s, placeholders

@@ -5,8 +5,8 @@
 package dbx
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 )
 
 type City struct {
@@ -90,7 +90,7 @@ func TestQuery_Rows(t *testing.T) {
 	// One
 	var customer Customer
 	sql = `SELECT * FROM customer WHERE id={:id}`
-	if err := db.NewQuery(sql).Bind(Params{"id":2}).One(&customer); err != nil {
+	if err := db.NewQuery(sql).Bind(Params{"id": 2}).One(&customer); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	} else {
 		assertEqual(t, customer.ID, 2, "customer.ID")
@@ -98,21 +98,21 @@ func TestQuery_Rows(t *testing.T) {
 		assertEqual(t, customer.Status, 1, "customer.Status")
 	}
 	customer2 := NullStringMap{}
-	if err := db.NewQuery(sql).Bind(Params{"id":1}).One(customer2); err != nil {
+	if err := db.NewQuery(sql).Bind(Params{"id": 1}).One(customer2); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	} else {
 		assertEqual(t, customer2["id"].String, "1", "customer2[id]")
 		assertEqual(t, customer2["email"].String, `user1@example.com`, "customer2[email]")
 		assertEqual(t, customer2["status"].String, "1", "customer2[status]")
 	}
-	if err := db.NewQuery(sql).Bind(Params{"id":2}).One(customer); err == nil {
+	if err := db.NewQuery(sql).Bind(Params{"id": 2}).One(customer); err == nil {
 		t.Error("Error expected when a non-pointer is used in One()")
 	}
 	var customer3 NullStringMap
-	if err := db.NewQuery(sql).Bind(Params{"id":2}).One(customer3); err == nil {
+	if err := db.NewQuery(sql).Bind(Params{"id": 2}).One(customer3); err == nil {
 		t.Error("Error expected when a nil NullStringMap is used One()")
 	}
-	if err := db.NewQuery(sql).Bind(Params{"id":1}).One(&customer3); err != nil {
+	if err := db.NewQuery(sql).Bind(Params{"id": 1}).One(&customer3); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	} else {
 		assertEqual(t, customer3["id"].String, "1", "customer3[id]")
@@ -179,14 +179,14 @@ func TestReplacePlaceholders(t *testing.T) {
 		HasError       bool
 	}{
 		{"t1", nil, nil, "null", false},
-		{"t2", []string{"id", "name"}, Params{"id":1, "name":"xyz"}, `[1,"xyz"]`, false},
-		{"t3", []string{"id", "name"}, Params{"id":1}, `null`, true},
-		{"t4", []string{"id", "name"}, Params{"id":1, "name":"xyz", "age":30}, `[1,"xyz"]`, false},
+		{"t2", []string{"id", "name"}, Params{"id": 1, "name": "xyz"}, `[1,"xyz"]`, false},
+		{"t3", []string{"id", "name"}, Params{"id": 1}, `null`, true},
+		{"t4", []string{"id", "name"}, Params{"id": 1, "name": "xyz", "age": 30}, `[1,"xyz"]`, false},
 	}
 	for _, test := range tests {
 		params, err := replacePlaceholders(test.Placeholders, test.Params)
 		result, _ := json.Marshal(params)
-		assertEqual(t, string(result), test.ExpectedParams, "params@" + test.ID)
-		assertEqual(t, err != nil, test.HasError, "error@" + test.ID)
+		assertEqual(t, string(result), test.ExpectedParams, "params@"+test.ID)
+		assertEqual(t, err != nil, test.HasError, "error@"+test.ID)
 	}
 }

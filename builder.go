@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"strings"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Builder supports building SQL statements in a DB-agnostic way.
@@ -191,7 +191,7 @@ func (b *BaseBuilder) Update(table string, cols Params, where Expression) *Query
 		value := cols[name]
 		name = b.db.QuoteColumnName(name)
 		if e, ok := value.(Expression); ok {
-			lines = append(lines, name + "=" + e.Build(b.db, params))
+			lines = append(lines, name+"="+e.Build(b.db, params))
 		} else {
 			lines = append(lines, fmt.Sprintf("%v={:p%v}", name, len(params)))
 			params[fmt.Sprintf("p%v", len(params))] = value
@@ -230,7 +230,7 @@ func (b *BaseBuilder) CreateTable(table string, cols map[string]string, options 
 
 	columns := []string{}
 	for _, name := range names {
-		columns = append(columns, b.db.QuoteColumnName(name) + " " + cols[name])
+		columns = append(columns, b.db.QuoteColumnName(name)+" "+cols[name])
 	}
 
 	sql := fmt.Sprintf("CREATE TABLE %v (%v)", b.db.QuoteTableName(table), strings.Join(columns, ", "))
