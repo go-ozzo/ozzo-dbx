@@ -2,6 +2,7 @@ package dbx_test
 
 import (
 	"fmt"
+
 	"github.com/go-ozzo/ozzo-dbx"
 )
 

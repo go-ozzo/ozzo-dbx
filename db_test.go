@@ -7,10 +7,11 @@ package dbx
 import (
 	"bytes"
 	"encoding/json"
-	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
