@@ -101,7 +101,7 @@ func NotLike(col string, values ...string) *LikeExp {
 	}
 }
 
-// NotLike generates an OR LIKE expression.
+// OrLike generates an OR LIKE expression.
 // This is similar to Like() except that the column should be like one of the possible values.
 // For example, OrLike("name", "key", "word") will generate a SQL expression:
 // "name" LIKE "%key%" OR "name" LIKE "%word%". Please see Like() for more details.
@@ -117,7 +117,7 @@ func OrLike(col string, values ...string) *LikeExp {
 	}
 }
 
-// NotLike generates an OR NOT LIKE expression.
+// OrNotLike generates an OR NOT LIKE expression.
 // For example, OrNotLike("name", "key", "word") will generate a SQL expression:
 // "name" NOT LIKE "%key%" OR "name" NOT LIKE "%word%". Please see Like() for more details.
 func OrNotLike(col string, values ...string) *LikeExp {
@@ -160,6 +160,7 @@ type Exp struct {
 	params Params
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *Exp) Build(db *DB, params Params) string {
 	if len(e.params) == 0 {
 		return e.e
@@ -170,6 +171,7 @@ func (e *Exp) Build(db *DB, params Params) string {
 	return e.e
 }
 
+// Build converts an expression into a SQL fragment.
 func (e HashExp) Build(db *DB, params Params) string {
 	if len(e) == 0 {
 		return ""
@@ -177,7 +179,7 @@ func (e HashExp) Build(db *DB, params Params) string {
 
 	// ensure the hash exp generates the same SQL for different runs
 	names := []string{}
-	for name, _ := range e {
+	for name := range e {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -216,6 +218,7 @@ type NotExp struct {
 	e Expression
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *NotExp) Build(db *DB, params Params) string {
 	if sql := e.e.Build(db, params); sql != "" {
 		return "NOT (" + sql + ")"
@@ -229,6 +232,7 @@ type AndOrExp struct {
 	op   string
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *AndOrExp) Build(db *DB, params Params) string {
 	if len(e.exps) == 0 {
 		return ""
@@ -256,6 +260,7 @@ type InExp struct {
 	not    bool
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *InExp) Build(db *DB, params Params) string {
 	if len(e.values) == 0 {
 		if e.not {
@@ -319,6 +324,7 @@ func (e *LikeExp) Match(left, right bool) *LikeExp {
 	return e
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *LikeExp) Build(db *DB, params Params) string {
 	if len(e.values) == 0 {
 		return ""
@@ -357,6 +363,7 @@ type ExistsExp struct {
 	not bool
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *ExistsExp) Build(db *DB, params Params) string {
 	sql := e.exp.Build(db, params)
 	if sql == "" {
@@ -378,6 +385,7 @@ type BetweenExp struct {
 	not      bool
 }
 
+// Build converts an expression into a SQL fragment.
 func (e *BetweenExp) Build(db *DB, params Params) string {
 	between := "BETWEEN"
 	if e.not {
