@@ -134,7 +134,7 @@ func TestDB_ProcessSQL(t *testing.T) {
 			"SELECT * FROM `public`.`user` WHERE `user`.`id`=1",
 			"SELECT * FROM \"public\".\"user\" WHERE \"user\".\"id\"=1",
 			"SELECT * FROM \"public\".\"user\" WHERE \"user\".\"id\"=1",
-			[]string{},
+			nil,
 		},
 	}
 

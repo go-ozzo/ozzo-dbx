@@ -15,6 +15,8 @@ type MssqlBuilder struct {
 	qb *MssqlQueryBuilder
 }
 
+var _ Builder = &MssqlBuilder{}
+
 // MssqlQueryBuilder is the query builder for SQL Server databases.
 type MssqlQueryBuilder struct {
 	*BaseQueryBuilder
@@ -28,10 +30,13 @@ func NewMssqlBuilder(db *DB, executor Executor) Builder {
 	}
 }
 
+// QueryBuilder returns the query builder supporting the current DB.
 func (b *MssqlBuilder) QueryBuilder() QueryBuilder {
 	return b.qb
 }
 
+// QuoteSimpleTableName quotes a simple table name.
+// A simple table name does not contain any schema prefix.
 func (b *MssqlBuilder) QuoteSimpleTableName(s string) string {
 	if strings.Contains(s, `[`) {
 		return s
@@ -39,6 +44,8 @@ func (b *MssqlBuilder) QuoteSimpleTableName(s string) string {
 	return `[` + s + `]`
 }
 
+// QuoteSimpleColumnName quotes a simple column name.
+// A simple column name does not contain any table prefix.
 func (b *MssqlBuilder) QuoteSimpleColumnName(s string) string {
 	if strings.Contains(s, `[`) || s == "*" {
 		return s
@@ -46,22 +53,26 @@ func (b *MssqlBuilder) QuoteSimpleColumnName(s string) string {
 	return `[` + s + `]`
 }
 
+// RenameTable creates a Query that can be used to rename a table.
 func (b *MssqlBuilder) RenameTable(oldName, newName string) *Query {
 	sql := fmt.Sprintf("sp_name '%v', '%v'", oldName, newName)
 	return b.NewQuery(sql)
 }
 
+// RenameColumn creates a Query that can be used to rename a column in a table.
 func (b *MssqlBuilder) RenameColumn(table, oldName, newName string) *Query {
 	sql := fmt.Sprintf("sp_name '%v.%v', '%v', 'COLUMN'", table, oldName, newName)
 	return b.NewQuery(sql)
 }
 
+// AlterColumn creates a Query that can be used to change the definition of a table column.
 func (b *MssqlBuilder) AlterColumn(table, col, typ string) *Query {
 	col = b.db.QuoteColumnName(col)
 	sql := fmt.Sprintf("ALTER TABLE %v ALTER COLUMN %v %v", b.db.QuoteTableName(table), col, typ)
 	return b.NewQuery(sql)
 }
 
+// BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
 func (q *MssqlQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
 	orderBy := q.BuildOrderBy(cols)
 	if limit < 0 && offset < 0 {

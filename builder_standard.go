@@ -10,6 +10,8 @@ type StandardBuilder struct {
 	qb *BaseQueryBuilder
 }
 
+var _ Builder = &StandardBuilder{}
+
 // NewStandardBuilder creates a new StandardBuilder instance.
 func NewStandardBuilder(db *DB, executor Executor) Builder {
 	return &StandardBuilder{
@@ -18,6 +20,7 @@ func NewStandardBuilder(db *DB, executor Executor) Builder {
 	}
 }
 
+// QueryBuilder returns the query builder supporting the current DB.
 func (b *StandardBuilder) QueryBuilder() QueryBuilder {
 	return b.qb
 }

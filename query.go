@@ -178,8 +178,8 @@ func (q *Query) One(a interface{}) error {
 	return q.LastError
 }
 
-// One executes the SQL statement and populates all the resulting rows into a slice of struct or NullStringMap.
-// The slice must be given as a pointer. The slice elements must be either structs or NullStringMap.
+// All executes the SQL statement and populates all the resulting rows into a slice of struct or NullStringMap.
+// The slice must be given as a pointer. Each slice element must be either a struct or a NullStringMap.
 // Refer to Rows.ScanStruct() and Rows.ScanMap() for more details on how each slice element can be.
 func (q *Query) All(slice interface{}) error {
 	if q.LastError != nil {
@@ -243,7 +243,7 @@ func replacePlaceholders(placeholders []string, params Params) ([]interface{}, e
 		return nil, nil
 	}
 
-	result := make([]interface{}, 0)
+	var result []interface{}
 	for _, name := range placeholders {
 		if value, ok := params[name]; ok {
 			result = append(result, value)

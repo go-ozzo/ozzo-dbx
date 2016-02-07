@@ -191,7 +191,7 @@ func (s *SelectQuery) Union(q *Query) *SelectQuery {
 	return s
 }
 
-// Union specifies a UNION ALL clause.
+// UnionAll specifies a UNION ALL clause.
 func (s *SelectQuery) UnionAll(q *Query) *SelectQuery {
 	s.union = append(s.union, UnionInfo{true, q})
 	return s
@@ -270,19 +270,19 @@ func (s *SelectQuery) One(a interface{}) error {
 	return s.Build().One(a)
 }
 
-// One builds and executes the SELECT query and populates all rows of the result into the specified variable.
+// All builds and executes the SELECT query and populates all rows of the result into the specified variable.
 // This is a shortcut to SelectQuery.Build().All()
 func (s *SelectQuery) All(slice interface{}) error {
 	return s.Build().All(slice)
 }
 
-// One builds and executes the SELECT query and returns a Rows object for data retrieval purpose.
+// Rows builds and executes the SELECT query and returns a Rows object for data retrieval purpose.
 // This is a shortcut to SelectQuery.Build().Rows()
 func (s *SelectQuery) Rows() (*Rows, error) {
 	return s.Build().Rows()
 }
 
-// One builds and executes the SELECT query and populates the first row of the result into the specified variables.
+// Row builds and executes the SELECT query and populates the first row of the result into the specified variables.
 // This is a shortcut to SelectQuery.Build().Row()
 func (s *SelectQuery) Row(a ...interface{}) error {
 	return s.Build().Row(a...)

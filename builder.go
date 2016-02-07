@@ -63,7 +63,7 @@ type Builder interface {
 	// TruncateTable creates a Query that can be used to truncate a table.
 	TruncateTable(table string) *Query
 
-	// AddPrimaryKey creates a Query that can be used to specify primary key(s) for a table.
+	// AddColumn creates a Query that can be used to add a column to a table.
 	AddColumn(table, col, typ string) *Query
 	// DropColumn creates a Query that can be used to drop a column from a table.
 	DropColumn(table, col string) *Query
@@ -105,30 +105,42 @@ func NewBaseBuilder(db *DB, executor Executor) *BaseBuilder {
 	return &BaseBuilder{db, executor}
 }
 
+// DB returns the DB instance that this builder is associated with.
 func (b *BaseBuilder) DB() *DB {
 	return b.db
 }
 
+// Executor returns the executor object (a DB instance or a transaction) for executing SQL statements.
 func (b *BaseBuilder) Executor() Executor {
 	return b.executor
 }
 
+// NewQuery creates a new Query object with the given SQL statement.
+// The SQL statement may contain parameter placeholders which can be bound with actual parameter
+// values before the statement is executed.
 func (b *BaseBuilder) NewQuery(sql string) *Query {
 	return NewQuery(b.db, b.executor, sql)
 }
 
+// Select returns a new SelectQuery object that can be used to build a SELECT statement.
+// The parameters to this method should be the list column names to be selected.
+// A column name may have an optional alias name. For example, Select("id", "my_name AS name").
 func (b *BaseBuilder) Select(cols ...string) *SelectQuery {
 	return NewSelectQuery(b.db.Builder, b.executor).Select(cols...)
 }
 
+// GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.
 func (b *BaseBuilder) GeneratePlaceholder(int) string {
 	return "?"
 }
 
+// Quote quotes a string so that it can be embedded in a SQL statement as a string value.
 func (b *BaseBuilder) Quote(s string) string {
 	return "'" + strings.Replace(s, "'", "''", -1) + "'"
 }
 
+// QuoteSimpleTableName quotes a simple table name.
+// A simple table name does not contain any schema prefix.
 func (b *BaseBuilder) QuoteSimpleTableName(s string) string {
 	if strings.Contains(s, `"`) {
 		return s
@@ -136,6 +148,8 @@ func (b *BaseBuilder) QuoteSimpleTableName(s string) string {
 	return `"` + s + `"`
 }
 
+// QuoteSimpleColumnName quotes a simple column name.
+// A simple column name does not contain any table prefix.
 func (b *BaseBuilder) QuoteSimpleColumnName(s string) string {
 	if strings.Contains(s, `"`) || s == "*" {
 		return s
@@ -143,9 +157,12 @@ func (b *BaseBuilder) QuoteSimpleColumnName(s string) string {
 	return `"` + s + `"`
 }
 
+// Insert creates a Query that represents an INSERT SQL statement.
+// The keys of cols are the column names, while the values of cols are the corresponding column
+// values to be inserted.
 func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 	names := []string{}
-	for name, _ := range cols {
+	for name := range cols {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -178,9 +195,13 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 	return b.NewQuery(sql).Bind(params)
 }
 
+// Update creates a Query that represents an UPDATE SQL statement.
+// The keys of cols are the column names, while the values of cols are the corresponding new column
+// values. If the "where" expression is nil, the UPDATE SQL statement will have no WHERE clause
+// (be careful in this case as the SQL statement will update ALL rows in the table).
 func (b *BaseBuilder) Update(table string, cols Params, where Expression) *Query {
 	names := []string{}
-	for name, _ := range cols {
+	for name := range cols {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -209,6 +230,9 @@ func (b *BaseBuilder) Update(table string, cols Params, where Expression) *Query
 	return b.NewQuery(sql).Bind(params)
 }
 
+// Delete creates a Query that represents a DELETE SQL statement.
+// If the "where" expression is nil, the DELETE SQL statement will have no WHERE clause
+// (be careful in this case as the SQL statement will delete ALL rows in the table).
 func (b *BaseBuilder) Delete(table string, where Expression) *Query {
 	sql := "DELETE FROM " + b.db.QuoteTableName(table)
 	params := Params{}
@@ -221,9 +245,12 @@ func (b *BaseBuilder) Delete(table string, where Expression) *Query {
 	return b.NewQuery(sql).Bind(params)
 }
 
+// CreateTable creates a Query that represents a CREATE TABLE SQL statement.
+// The keys of cols are the column names, while the values of cols are the corresponding column types.
+// The optional "options" parameters will be appended to the generated SQL statement.
 func (b *BaseBuilder) CreateTable(table string, cols map[string]string, options ...string) *Query {
 	names := []string{}
-	for name, _ := range cols {
+	for name := range cols {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -241,42 +268,51 @@ func (b *BaseBuilder) CreateTable(table string, cols map[string]string, options 
 	return b.NewQuery(sql)
 }
 
+// RenameTable creates a Query that can be used to rename a table.
 func (b *BaseBuilder) RenameTable(oldName, newName string) *Query {
 	sql := fmt.Sprintf("RENAME TABLE %v TO %v", b.db.QuoteTableName(oldName), b.db.QuoteTableName(newName))
 	return b.NewQuery(sql)
 }
 
+// DropTable creates a Query that can be used to drop a table.
 func (b *BaseBuilder) DropTable(table string) *Query {
 	sql := "DROP TABLE " + b.db.QuoteTableName(table)
 	return b.NewQuery(sql)
 }
 
+// TruncateTable creates a Query that can be used to truncate a table.
 func (b *BaseBuilder) TruncateTable(table string) *Query {
 	sql := "TRUNCATE TABLE " + b.db.QuoteTableName(table)
 	return b.NewQuery(sql)
 }
 
+// AddColumn creates a Query that can be used to add a column to a table.
 func (b *BaseBuilder) AddColumn(table, col, typ string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v ADD %v %v", b.db.QuoteTableName(table), b.db.QuoteColumnName(col), typ)
 	return b.NewQuery(sql)
 }
 
+// DropColumn creates a Query that can be used to drop a column from a table.
 func (b *BaseBuilder) DropColumn(table, col string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v DROP COLUMN %v", b.db.QuoteTableName(table), b.db.QuoteColumnName(col))
 	return b.NewQuery(sql)
 }
 
+// RenameColumn creates a Query that can be used to rename a column in a table.
 func (b *BaseBuilder) RenameColumn(table, oldName, newName string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v RENAME COLUMN %v TO %v", b.db.QuoteTableName(table), b.db.QuoteColumnName(oldName), b.db.QuoteColumnName(newName))
 	return b.NewQuery(sql)
 }
 
+// AlterColumn creates a Query that can be used to change the definition of a table column.
 func (b *BaseBuilder) AlterColumn(table, col, typ string) *Query {
 	col = b.db.QuoteColumnName(col)
 	sql := fmt.Sprintf("ALTER TABLE %v CHANGE %v %v %v", b.db.QuoteTableName(table), col, col, typ)
 	return b.NewQuery(sql)
 }
 
+// AddPrimaryKey creates a Query that can be used to specify primary key(s) for a table.
+// The "name" parameter specifies the name of the primary key constraint.
 func (b *BaseBuilder) AddPrimaryKey(table, name string, cols ...string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v ADD CONSTRAINT %v PRIMARY KEY (%v)",
 		b.db.QuoteTableName(table),
@@ -285,11 +321,16 @@ func (b *BaseBuilder) AddPrimaryKey(table, name string, cols ...string) *Query {
 	return b.NewQuery(sql)
 }
 
+// DropPrimaryKey creates a Query that can be used to remove the named primary key constraint from a table.
 func (b *BaseBuilder) DropPrimaryKey(table, name string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v DROP CONSTRAINT %v", b.db.QuoteTableName(table), b.db.QuoteColumnName(name))
 	return b.NewQuery(sql)
 }
 
+// AddForeignKey creates a Query that can be used to add a foreign key constraint to a table.
+// The length of cols and refCols must be the same as they refer to the primary and referential columns.
+// The optional "options" parameters will be appended to the SQL statement. They can be used to
+// specify options such as "ON DELETE CASCADE".
 func (b *BaseBuilder) AddForeignKey(table, name string, cols, refCols []string, refTable string, options ...string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v ADD CONSTRAINT %v FOREIGN KEY (%v) REFERENCES %v (%v)",
 		b.db.QuoteTableName(table),
@@ -303,11 +344,13 @@ func (b *BaseBuilder) AddForeignKey(table, name string, cols, refCols []string, 
 	return b.NewQuery(sql)
 }
 
+// DropForeignKey creates a Query that can be used to remove the named foreign key constraint from a table.
 func (b *BaseBuilder) DropForeignKey(table, name string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v DROP CONSTRAINT %v", b.db.QuoteTableName(table), b.db.QuoteColumnName(name))
 	return b.NewQuery(sql)
 }
 
+// CreateIndex creates a Query that can be used to create an index for a table.
 func (b *BaseBuilder) CreateIndex(table, name string, cols ...string) *Query {
 	sql := fmt.Sprintf("CREATE INDEX %v ON %v (%v)",
 		b.db.QuoteColumnName(name),
@@ -316,6 +359,7 @@ func (b *BaseBuilder) CreateIndex(table, name string, cols ...string) *Query {
 	return b.NewQuery(sql)
 }
 
+// CreateUniqueIndex creates a Query that can be used to create a unique index for a table.
 func (b *BaseBuilder) CreateUniqueIndex(table, name string, cols ...string) *Query {
 	sql := fmt.Sprintf("CREATE UNIQUE INDEX %v ON %v (%v)",
 		b.db.QuoteColumnName(name),
@@ -324,6 +368,7 @@ func (b *BaseBuilder) CreateUniqueIndex(table, name string, cols ...string) *Que
 	return b.NewQuery(sql)
 }
 
+// DropIndex creates a Query that can be used to remove the named index from a table.
 func (b *BaseBuilder) DropIndex(table, name string) *Query {
 	sql := fmt.Sprintf("DROP INDEX %v ON %v", b.db.QuoteColumnName(name), b.db.QuoteTableName(table))
 	return b.NewQuery(sql)

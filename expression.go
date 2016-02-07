@@ -184,7 +184,7 @@ func (e HashExp) Build(db *DB, params Params) string {
 	}
 	sort.Strings(names)
 
-	parts := make([]string, 0)
+	var parts []string
 	for _, name := range names {
 		value := e[name]
 		switch value.(type) {
@@ -238,7 +238,7 @@ func (e *AndOrExp) Build(db *DB, params Params) string {
 		return ""
 	}
 
-	parts := make([]string, 0)
+	var parts []string
 	for _, a := range e.exps {
 		if a == nil {
 			continue
@@ -269,7 +269,7 @@ func (e *InExp) Build(db *DB, params Params) string {
 		return "0=1"
 	}
 
-	values := make([]string, 0)
+	var values []string
 	for _, value := range e.values {
 		switch value.(type) {
 		case nil:
@@ -334,7 +334,7 @@ func (e *LikeExp) Build(db *DB, params Params) string {
 		panic("LikeExp.Escape must be a slice of even number of strings")
 	}
 
-	parts := make([]string, 0)
+	var parts []string
 	col := db.QuoteColumnName(e.col)
 	for _, value := range e.values {
 		name := fmt.Sprintf("p%v", len(params))

@@ -35,6 +35,8 @@ type BaseQueryBuilder struct {
 	db *DB
 }
 
+var _ QueryBuilder = &BaseQueryBuilder{}
+
 // NewBaseQueryBuilder creates a new BaseQueryBuilder instance.
 func NewBaseQueryBuilder(db *DB) *BaseQueryBuilder {
 	return &BaseQueryBuilder{db}
@@ -48,6 +50,7 @@ func (q *BaseQueryBuilder) DB() *DB {
 // the regexp for columns and tables.
 var selectRegex = regexp.MustCompile(`(?i:\s+as\s+|\s+)([\w\-_\.]+)$`)
 
+// BuildSelect generates a SELECT clause from the given selected column names.
 func (q *BaseQueryBuilder) BuildSelect(cols []string, distinct bool, option string) string {
 	s := ""
 	for i, col := range cols {
@@ -77,6 +80,7 @@ func (q *BaseQueryBuilder) BuildSelect(cols []string, distinct bool, option stri
 	return sel + " " + s
 }
 
+// BuildFrom generates a FROM clause from the given tables.
 func (q *BaseQueryBuilder) BuildFrom(tables []string) string {
 	if len(tables) == 0 {
 		return ""
@@ -93,6 +97,7 @@ func (q *BaseQueryBuilder) BuildFrom(tables []string) string {
 	return "FROM " + s
 }
 
+// BuildJoin generates a JOIN clause from the given join information.
 func (q *BaseQueryBuilder) BuildJoin(joins []JoinInfo, params Params) string {
 	if len(joins) == 0 {
 		return ""
@@ -112,6 +117,7 @@ func (q *BaseQueryBuilder) BuildJoin(joins []JoinInfo, params Params) string {
 	return strings.Join(parts, " ")
 }
 
+// BuildWhere generates a WHERE clause from the given expression.
 func (q *BaseQueryBuilder) BuildWhere(e Expression, params Params) string {
 	if e != nil {
 		if c := e.Build(q.db, params); c != "" {
@@ -121,6 +127,7 @@ func (q *BaseQueryBuilder) BuildWhere(e Expression, params Params) string {
 	return ""
 }
 
+// BuildHaving generates a HAVING clause from the given expression.
 func (q *BaseQueryBuilder) BuildHaving(e Expression, params Params) string {
 	if e != nil {
 		if c := e.Build(q.db, params); c != "" {
@@ -130,6 +137,7 @@ func (q *BaseQueryBuilder) BuildHaving(e Expression, params Params) string {
 	return ""
 }
 
+// BuildGroupBy generates a GROUP BY clause from the given group-by columns.
 func (q *BaseQueryBuilder) BuildGroupBy(cols []string) string {
 	if len(cols) == 0 {
 		return ""
@@ -145,6 +153,7 @@ func (q *BaseQueryBuilder) BuildGroupBy(cols []string) string {
 	return "GROUP BY " + s
 }
 
+// BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
 func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
 	if orderBy := q.BuildOrderBy(cols); orderBy != "" {
 		sql += " " + orderBy
@@ -155,6 +164,7 @@ func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit
 	return sql
 }
 
+// BuildUnion generates a UNION clause from the given union information.
 func (q *BaseQueryBuilder) BuildUnion(unions []UnionInfo, params Params) string {
 	if len(unions) == 0 {
 		return ""
@@ -178,6 +188,7 @@ func (q *BaseQueryBuilder) BuildUnion(unions []UnionInfo, params Params) string 
 
 var orderRegex = regexp.MustCompile(`\s+((?i)ASC|DESC)$`)
 
+// BuildOrderBy generates the ORDER BY clause.
 func (q *BaseQueryBuilder) BuildOrderBy(cols []string) string {
 	if len(cols) == 0 {
 		return ""
@@ -199,6 +210,7 @@ func (q *BaseQueryBuilder) BuildOrderBy(cols []string) string {
 	return "ORDER BY " + s
 }
 
+// BuildLimit generates the LIMIT clause.
 func (q *BaseQueryBuilder) BuildLimit(limit int64, offset int64) string {
 	if limit < 0 && offset > 0 {
 		// most DBMS requires LIMIT when OFFSET is present

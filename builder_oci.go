@@ -14,6 +14,8 @@ type OciBuilder struct {
 	qb *OciQueryBuilder
 }
 
+var _ Builder = &OciBuilder{}
+
 // OciQueryBuilder is the query builder for Oracle databases.
 type OciQueryBuilder struct {
 	*BaseQueryBuilder
@@ -27,30 +29,36 @@ func NewOciBuilder(db *DB, executor Executor) Builder {
 	}
 }
 
+// GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.
 func (b *OciBuilder) GeneratePlaceholder(i int) string {
 	return fmt.Sprintf(":p%v", i)
 }
 
+// QueryBuilder returns the query builder supporting the current DB.
 func (b *OciBuilder) QueryBuilder() QueryBuilder {
 	return b.qb
 }
 
+// DropIndex creates a Query that can be used to remove the named index from a table.
 func (b *OciBuilder) DropIndex(table, name string) *Query {
 	sql := fmt.Sprintf("DROP INDEX %v", b.db.QuoteColumnName(name))
 	return b.NewQuery(sql)
 }
 
+// RenameTable creates a Query that can be used to rename a table.
 func (b *OciBuilder) RenameTable(oldName, newName string) *Query {
 	sql := fmt.Sprintf("ALTER TABLE %v RENAME TO %v", b.db.QuoteTableName(oldName), b.db.QuoteTableName(newName))
 	return b.NewQuery(sql)
 }
 
+// AlterColumn creates a Query that can be used to change the definition of a table column.
 func (b *OciBuilder) AlterColumn(table, col, typ string) *Query {
 	col = b.db.QuoteColumnName(col)
 	sql := fmt.Sprintf("ALTER TABLE %v MODIFY %v %v", b.db.QuoteTableName(table), col, typ)
 	return b.NewQuery(sql)
 }
 
+// BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
 func (q *OciQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
 	if orderBy := q.BuildOrderBy(cols); orderBy != "" {
 		sql += "\n" + orderBy

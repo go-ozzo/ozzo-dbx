@@ -34,7 +34,7 @@ type Rows struct {
 // the corresponding element values.
 func (r *Rows) ScanMap(a NullStringMap) error {
 	cols, _ := r.Columns()
-	refs := make([]interface{}, 0)
+	var refs []interface{}
 	for i := 0; i < len(cols); i++ {
 		var t sql.NullString
 		refs = append(refs, &t)
