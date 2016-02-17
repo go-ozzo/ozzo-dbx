@@ -190,3 +190,11 @@ func TestReplacePlaceholders(t *testing.T) {
 		assertEqual(t, err != nil, test.HasError, "error@"+test.ID)
 	}
 }
+
+func TestIssue6(t *testing.T) {
+	db := getDB()
+	q := db.Select("*").From("customer").Where(HashExp{"id": 1})
+	var customer Customer
+	assertEqual(t, q.One(&customer), nil)
+	assertEqual(t, 1, customer.ID)
+}

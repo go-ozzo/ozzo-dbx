@@ -261,7 +261,7 @@ func (s *SelectQuery) Build() *Query {
 		sql = fmt.Sprintf("(%v) %v", sql, union)
 	}
 
-	return s.builder.NewQuery(sql).Bind(s.params)
+	return s.builder.NewQuery(sql).Bind(params)
 }
 
 // One builds and executes the SELECT query and populates the first row of the result into the specified variable.
