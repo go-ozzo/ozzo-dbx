@@ -218,7 +218,7 @@ func ExampleDB() {
 	db.NewQuery("SELECT id, name FROM users WHERE age=30").All(&users)
 
 	// queries data using query builder
-	db.Select("id", "name").Where(dbx.HashExp{"age": 30}).All(&users)
+	db.Select("id", "name").From("users").Where(dbx.HashExp{"age": 30}).All(&users)
 
 	// executes a plain SQL
 	db.NewQuery("INSERT INTO users (name) SET ({:name})").Bind(dbx.Params{"name": "James"}).Execute()
