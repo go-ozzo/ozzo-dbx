@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	ss "database/sql"
 	"encoding/json"
 	"testing"
 )
@@ -151,16 +152,18 @@ func TestQuery_Rows(t *testing.T) {
 	q := db.NewQuery(sql).Prepare()
 	q.Bind(Params{"id": 1}).One(&customer)
 	assertEqual(t, customer.ID, 1, "prepared@1")
-	q.Bind(Params{"id": 2}).One(&customer)
-	assertEqual(t, customer.ID, 2, "prepared@2")
+	err = q.Bind(Params{"id": 20}).One(&customer)
+	assertEqual(t, err, ss.ErrNoRows, "prepared@2")
+	q.Bind(Params{"id": 3}).One(&customer)
+	assertEqual(t, customer.ID, 3, "prepared@3")
 
 	sql = `SELECT name FROM customer WHERE id={:id}`
 	var name string
 	q = db.NewQuery(sql).Prepare()
 	q.Bind(Params{"id": 1}).Row(&name)
 	assertEqual(t, name, "user1", "prepared2@1")
-	q.Bind(Params{"id": 2}).Row(&name)
-	assertEqual(t, name, "user2", "prepared2@2")
+	err = q.Bind(Params{"id": 20}).Row(&name)
+	assertEqual(t, err, ss.ErrNoRows, "prepared2@2")
 	q.Bind(Params{"id": 3}).Row(&name)
 	assertEqual(t, name, "user3", "prepared2@3")
 

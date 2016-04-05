@@ -164,6 +164,7 @@ func (q *Query) Execute() (sql.Result, error) {
 // One executes the SQL statement and populates the first row of the result into a struct or NullStringMap.
 // Refer to Rows.ScanStruct() and Rows.ScanMap() for more details on how to specify
 // the variable to be populated.
+// Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (q *Query) One(a interface{}) error {
 	if q.LastError != nil {
 		return q.LastError
@@ -197,6 +198,7 @@ func (q *Query) All(slice interface{}) error {
 
 // Row executes the SQL statement and populates the first row of the result into a list of variables.
 // Note that the number of the variables should match to that of the columns in the query result.
+// Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (q *Query) Row(a ...interface{}) error {
 	if q.LastError != nil {
 		return q.LastError

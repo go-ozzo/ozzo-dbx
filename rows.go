@@ -156,7 +156,10 @@ func (r *Rows) one(a interface{}) error {
 	defer r.Close()
 
 	if !r.Next() {
-		return nil
+		if err := r.Err(); err != nil {
+			return err
+		}
+		return sql.ErrNoRows
 	}
 
 	var err error
