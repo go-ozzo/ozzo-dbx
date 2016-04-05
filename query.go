@@ -39,6 +39,7 @@ type Query struct {
 	// FieldMapper maps struct field names to DB column names.
 	FieldMapper FieldMapFunc
 	// LastError contains the last error (if any) of the query.
+	// LastError is cleared by Execute(), Row(), Rows(), One(), and All().
 	LastError error
 	// LogFunc is used to log the SQL statement being executed.
 	LogFunc LogFunc
@@ -136,29 +137,29 @@ func (q *Query) Bind(params Params) *Query {
 }
 
 // Execute executes the SQL statement without retrieving data.
-func (q *Query) Execute() (sql.Result, error) {
-	if q.LastError != nil {
-		return nil, q.LastError
+func (q *Query) Execute() (result sql.Result, err error) {
+	err = q.LastError
+	q.LastError = nil
+	if err != nil {
+		return
 	}
 
-	params, err := replacePlaceholders(q.placeholders, q.params)
+	var params []interface{}
+	params, err = replacePlaceholders(q.placeholders, q.params)
 	if err != nil {
-		q.LastError = err
-		return nil, err
+		return
 	}
 
 	if q.LogFunc != nil {
 		defer q.log(time.Now(), true)
 	}
 
-	var result sql.Result
 	if q.stmt == nil {
-		result, q.LastError = q.executor.Exec(q.rawSQL, params...)
+		result, err = q.executor.Exec(q.rawSQL, params...)
 	} else {
-		result, q.LastError = q.stmt.Exec(params...)
+		result, err = q.stmt.Exec(params...)
 	}
-
-	return result, q.LastError
+	return
 }
 
 // One executes the SQL statement and populates the first row of the result into a struct or NullStringMap.
@@ -166,77 +167,61 @@ func (q *Query) Execute() (sql.Result, error) {
 // the variable to be populated.
 // Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (q *Query) One(a interface{}) error {
-	if q.LastError != nil {
-		return q.LastError
-	}
-
 	rows, err := q.Rows()
 	if err != nil {
-		q.LastError = err
-	} else {
-		q.LastError = rows.one(a)
+		return err
 	}
-	return q.LastError
+	return rows.one(a)
 }
 
 // All executes the SQL statement and populates all the resulting rows into a slice of struct or NullStringMap.
 // The slice must be given as a pointer. Each slice element must be either a struct or a NullStringMap.
 // Refer to Rows.ScanStruct() and Rows.ScanMap() for more details on how each slice element can be.
 func (q *Query) All(slice interface{}) error {
-	if q.LastError != nil {
-		return q.LastError
-	}
-
 	rows, err := q.Rows()
 	if err != nil {
-		q.LastError = err
-	} else {
-		q.LastError = rows.all(slice)
+		return err
 	}
-	return q.LastError
+	return rows.all(slice)
 }
 
 // Row executes the SQL statement and populates the first row of the result into a list of variables.
 // Note that the number of the variables should match to that of the columns in the query result.
 // Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (q *Query) Row(a ...interface{}) error {
-	if q.LastError != nil {
-		return q.LastError
-	}
-
 	rows, err := q.Rows()
 	if err != nil {
-		q.LastError = err
-	} else {
-		q.LastError = rows.row(a...)
+		return err
 	}
-	return q.LastError
+	return rows.row(a...)
 }
 
 // Rows executes the SQL statement and returns a Rows object to allow retrieving data row by row.
-func (q *Query) Rows() (*Rows, error) {
-	if q.LastError != nil {
-		return nil, q.LastError
+func (q *Query) Rows() (rows *Rows, err error) {
+	err = q.LastError
+	q.LastError = nil
+	if err != nil {
+		return
 	}
 
-	params, err := replacePlaceholders(q.placeholders, q.params)
+	var params []interface{}
+	params, err = replacePlaceholders(q.placeholders, q.params)
 	if err != nil {
-		q.LastError = err
-		return nil, err
+		return
 	}
 
 	if q.LogFunc != nil {
 		defer q.log(time.Now(), false)
 	}
 
-	var rows *sql.Rows
+	var rr *sql.Rows
 	if q.stmt == nil {
-		rows, q.LastError = q.executor.Query(q.rawSQL, params...)
+		rr, err = q.executor.Query(q.rawSQL, params...)
 	} else {
-		rows, q.LastError = q.stmt.Query(params...)
+		rr, err = q.stmt.Query(params...)
 	}
-
-	return &Rows{rows, q.FieldMapper}, q.LastError
+	rows = &Rows{rr, q.FieldMapper}
+	return
 }
 
 // replacePlaceholders converts a list of named parameters into a list of anonymous parameters.

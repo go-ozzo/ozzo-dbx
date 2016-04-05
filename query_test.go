@@ -171,9 +171,10 @@ func TestQuery_Rows(t *testing.T) {
 	sql = `SELECT * FROM a`
 	q = db.NewQuery(sql).Prepare()
 	customer.ID = 100
-	q.Bind(Params{"id": 1}).One(&customer)
+	err = q.Bind(Params{"id": 1}).One(&customer)
+	assertNotEqual(t, err, nil, "LastError@0")
 	assertEqual(t, customer.ID, 100, "LastError@1")
-	assertNotEqual(t, q.LastError, nil, "LastError@2")
+	assertEqual(t, q.LastError, nil, "LastError@2")
 }
 
 func TestQuery_logSQL(t *testing.T) {
