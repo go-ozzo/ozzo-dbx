@@ -154,6 +154,16 @@ func TestQuery_Rows(t *testing.T) {
 	q.Bind(Params{"id": 2}).One(&customer)
 	assertEqual(t, customer.ID, 2, "prepared@2")
 
+	sql = `SELECT name FROM customer WHERE id={:id}`
+	var name string
+	q = db.NewQuery(sql).Prepare()
+	q.Bind(Params{"id": 1}).Row(&name)
+	assertEqual(t, name, "user1", "prepared2@1")
+	q.Bind(Params{"id": 2}).Row(&name)
+	assertEqual(t, name, "user2", "prepared2@2")
+	q.Bind(Params{"id": 3}).Row(&name)
+	assertEqual(t, name, "user3", "prepared2@3")
+
 	// Query.LastError
 	sql = `SELECT * FROM a`
 	q = db.NewQuery(sql).Prepare()
