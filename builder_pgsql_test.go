@@ -13,8 +13,8 @@ func TestPgsqlBuilder_Upsert(t *testing.T) {
 	q := b.Upsert("users", Params{
 		"name": "James",
 		"age":  30,
-	})
-	assertEqual(t, q.SQL(), `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1}) ON CONFLICT DO UPDATE SET "age"={:p2}, "name"={:p3}`, "t1")
+	}, "id")
+	assertEqual(t, q.SQL(), `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "age"={:p2}, "name"={:p3}`, "t1")
 	assertEqual(t, q.Params()["p0"], 30, "t2")
 	assertEqual(t, q.Params()["p1"], "James", "t3")
 	assertEqual(t, q.Params()["p2"], 30, "t2")

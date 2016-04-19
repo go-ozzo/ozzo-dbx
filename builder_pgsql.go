@@ -41,7 +41,7 @@ func (b *PgsqlBuilder) QueryBuilder() QueryBuilder {
 // Otherwise it will update the row with the new values.
 // The keys of cols are the column names, while the values of cols are the corresponding column
 // values to be inserted.
-func (b *PgsqlBuilder) Upsert(table string, cols Params) *Query {
+func (b *PgsqlBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
 	q := b.Insert(table, cols)
 
 	names := []string{}
@@ -62,7 +62,12 @@ func (b *PgsqlBuilder) Upsert(table string, cols Params) *Query {
 		}
 	}
 
-	q.sql += " ON CONFLICT DO UPDATE SET " + strings.Join(lines, ", ")
+	if len(constraints) > 0 {
+		c := b.quoteColumns(constraints)
+		q.sql += " ON CONFLICT (" + c + ") DO UPDATE SET " + strings.Join(lines, ", ")
+	} else {
+		q.sql += " ON CONFLICT DO UPDATE SET " + strings.Join(lines, ", ")
+	}
 
 	return q
 }

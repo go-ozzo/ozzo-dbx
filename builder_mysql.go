@@ -55,7 +55,7 @@ func (b *MysqlBuilder) QuoteSimpleColumnName(s string) string {
 // Otherwise it will update the row with the new values.
 // The keys of cols are the column names, while the values of cols are the corresponding column
 // values to be inserted.
-func (b *MysqlBuilder) Upsert(table string, cols Params) *Query {
+func (b *MysqlBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
 	q := b.Insert(table, cols)
 
 	names := []string{}

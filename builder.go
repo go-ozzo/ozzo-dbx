@@ -48,7 +48,7 @@ type Builder interface {
 	// Otherwise it will update the row with the new values.
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
-	Upsert(table string, cols Params) *Query
+	Upsert(table string, cols Params, constraints ...string) *Query
 	// Update creates a Query that represents an UPDATE SQL statement.
 	// The keys of cols are the column names, while the values of cols are the corresponding new column
 	// values. If the "where" expression is nil, the UPDATE SQL statement will have no WHERE clause
@@ -207,7 +207,7 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 // Otherwise it will update the row with the new values.
 // The keys of cols are the column names, while the values of cols are the corresponding column
 // values to be inserted.
-func (b *BaseBuilder) Upsert(table string, cols Params) *Query {
+func (b *BaseBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
 	q := b.NewQuery("")
 	q.LastError = errors.New("Upsert is not supported")
 	return q
