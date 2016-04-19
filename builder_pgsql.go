@@ -6,6 +6,8 @@ package dbx
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 )
 
 // PgsqlBuilder is the builder for PostgreSQL databases.
@@ -32,6 +34,37 @@ func (b *PgsqlBuilder) GeneratePlaceholder(i int) string {
 // QueryBuilder returns the query builder supporting the current DB.
 func (b *PgsqlBuilder) QueryBuilder() QueryBuilder {
 	return b.qb
+}
+
+// Upsert creates a Query that represents an UPSERT SQL statement.
+// Upsert inserts a row into the table if the primary key or unique index is not found.
+// Otherwise it will update the row with the new values.
+// The keys of cols are the column names, while the values of cols are the corresponding column
+// values to be inserted.
+func (b *PgsqlBuilder) Upsert(table string, cols Params) *Query {
+	q := b.Insert(table, cols)
+
+	names := []string{}
+	for name := range cols {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	lines := []string{}
+	for _, name := range names {
+		value := cols[name]
+		name = b.db.QuoteColumnName(name)
+		if e, ok := value.(Expression); ok {
+			lines = append(lines, name+"="+e.Build(b.db, q.params))
+		} else {
+			lines = append(lines, fmt.Sprintf("%v={:p%v}", name, len(q.params)))
+			q.params[fmt.Sprintf("p%v", len(q.params))] = value
+		}
+	}
+
+	q.sql += " ON CONFLICT DO UPDATE SET " + strings.Join(lines, ", ")
+
+	return q
 }
 
 // DropIndex creates a Query that can be used to remove the named index from a table.

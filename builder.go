@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"errors"
 )
 
 // Builder supports building SQL statements in a DB-agnostic way.
@@ -42,6 +43,12 @@ type Builder interface {
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
 	Insert(table string, cols Params) *Query
+	// Upsert creates a Query that represents an UPSERT SQL statement.
+	// Upsert inserts a row into the table if the primary key or unique index is not found.
+	// Otherwise it will update the row with the new values.
+	// The keys of cols are the column names, while the values of cols are the corresponding column
+	// values to be inserted.
+	Upsert(table string, cols Params) *Query
 	// Update creates a Query that represents an UPDATE SQL statement.
 	// The keys of cols are the column names, while the values of cols are the corresponding new column
 	// values. If the "where" expression is nil, the UPDATE SQL statement will have no WHERE clause
@@ -193,6 +200,17 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 	}
 
 	return b.NewQuery(sql).Bind(params)
+}
+
+// Upsert creates a Query that represents an UPSERT SQL statement.
+// Upsert inserts a row into the table if the primary key or unique index is not found.
+// Otherwise it will update the row with the new values.
+// The keys of cols are the column names, while the values of cols are the corresponding column
+// values to be inserted.
+func (b *BaseBuilder) Upsert(table string, cols Params) *Query {
+	q := b.NewQuery("")
+	q.LastError = errors.New("Upsert is not supported")
+	return q
 }
 
 // Update creates a Query that represents an UPDATE SQL statement.

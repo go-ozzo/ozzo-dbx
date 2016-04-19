@@ -46,6 +46,15 @@ func TestStandardBuilder_Insert(t *testing.T) {
 	assertEqual(t, q.SQL(), `INSERT INTO "users" DEFAULT VALUES`, "t2")
 }
 
+func TestStandardBuilder_Upsert(t *testing.T) {
+	b := getStandardBuilder()
+	q := b.Upsert("users", Params{
+		"name": "James",
+		"age":  30,
+	})
+	assertNotEqual(t, q.LastError, nil, "t1")
+}
+
 func TestStandardBuilder_Update(t *testing.T) {
 	b := getStandardBuilder()
 	q := b.Update("users", Params{
