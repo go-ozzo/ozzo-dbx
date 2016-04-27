@@ -87,6 +87,6 @@ func (b *PgsqlBuilder) RenameTable(oldName, newName string) *Query {
 // AlterColumn creates a Query that can be used to change the definition of a table column.
 func (b *PgsqlBuilder) AlterColumn(table, col, typ string) *Query {
 	col = b.db.QuoteColumnName(col)
-	sql := fmt.Sprintf("ALTER TABLE %v ALTER COLUMN %v %v", b.db.QuoteTableName(table), col, typ)
+	sql := fmt.Sprintf("ALTER TABLE %v ALTER COLUMN %v TYPE %v", b.db.QuoteTableName(table), col, typ)
 	return b.NewQuery(sql)
 }

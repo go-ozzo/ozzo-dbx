@@ -35,7 +35,7 @@ func TestPgsqlBuilder_RenameTable(t *testing.T) {
 func TestPgsqlBuilder_AlterColumn(t *testing.T) {
 	b := getPgsqlBuilder()
 	q := b.AlterColumn("users", "name", "int")
-	assertEqual(t, q.SQL(), `ALTER TABLE "users" ALTER COLUMN "name" int`, "t1")
+	assertEqual(t, q.SQL(), `ALTER TABLE "users" ALTER COLUMN "name" TYPE int`, "t1")
 }
 
 func getPgsqlBuilder() Builder {
