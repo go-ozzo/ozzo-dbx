@@ -11,8 +11,6 @@ import (
 	"sync"
 )
 
-const dbTag = "db"
-
 // FieldMapFunc converts a struct field name into a DB column name.
 type FieldMapFunc func(string) string
 
@@ -22,6 +20,9 @@ type fieldMapKey struct {
 }
 
 var (
+	// DbTag is the name of the struct tag used to specify the column name for the associated struct field
+	DbTag = "db"
+
 	muFieldMap sync.Mutex
 	fieldMap   = make(map[fieldMapKey]map[string][]int)
 	fieldRegex = regexp.MustCompile(`([^A-Z_])([A-Z])`)
@@ -61,7 +62,7 @@ func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string]
 	n := a.NumField()
 	for i := 0; i < n; i++ {
 		field := a.Field(i)
-		tag := field.Tag.Get(dbTag)
+		tag := field.Tag.Get(DbTag)
 
 		// only handle anonymous or exported fields
 		if !field.Anonymous && field.PkgPath != "" || tag == "-" {
