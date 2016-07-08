@@ -5,13 +5,13 @@
 package dbx
 
 import (
-	"bytes"
-	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"strings"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -20,39 +20,33 @@ const (
 )
 
 func TestDB_Open(t *testing.T) {
-	if _, err := Open("mysql", TestDSN); err != nil {
-		t.Errorf("Failed to open a mysql database: %v", err)
+	db, err := Open("mysql", TestDSN)
+	assert.Nil(t, err)
+	if assert.NotNil(t, db) {
+		assert.NotNil(t, db.sqlDB)
+		assert.NotNil(t, db.FieldMapper)
 	}
 
-	if _, err := Open("xyz", TestDSN); err == nil {
-		t.Error("Using xyz driver should cause an error")
-	}
-
-	db, _ := Open("mysql", TestDSN)
-	assertNotEqual(t, db.sqlDB, nil, "BaseDB")
-	assertNotEqual(t, db.FieldMapper, nil, "MapField")
+	_, err = Open("xyz", TestDSN)
+	assert.NotNil(t, err)
 }
 
 func TestDB_MustOpen(t *testing.T) {
-	if _, err := MustOpen("mysql", TestDSN); err != nil {
-		t.Errorf("Failed to open a mysql database: %v", err)
-	}
+	_, err := MustOpen("mysql", TestDSN)
+	assert.Nil(t, err)
 
-	if _, err := MustOpen("mysql", "unknown:x@/test"); err == nil {
-		t.Error("Using an invalid DSN should cause an error")
-	}
+	_, err = MustOpen("mysql", "unknown:x@/test")
+	assert.NotNil(t, err)
 }
 
 func TestDB_Close(t *testing.T) {
 	db := getDB()
-	if err := db.Close(); err != nil {
-		t.Errorf("Failed to close database: %v", err)
-	}
+	assert.Nil(t, db.Close())
 }
 
 func TestDB_DriverName(t *testing.T) {
 	db := getDB()
-	assertEqual(t, db.DriverName(), "mysql")
+	assert.Equal(t, "mysql", db.DriverName())
 }
 
 func TestDB_QuoteTableName(t *testing.T) {
@@ -68,9 +62,7 @@ func TestDB_QuoteTableName(t *testing.T) {
 	db := getDB()
 	for _, test := range tests {
 		result := db.QuoteTableName(test.input)
-		if result != test.output {
-			t.Errorf("QuoteTableName(%v) = %v, expected %v", test.input, result, test.output)
-		}
+		assert.Equal(t, test.output, result, test.input)
 	}
 }
 
@@ -90,14 +82,13 @@ func TestDB_QuoteColumnName(t *testing.T) {
 	db := getDB()
 	for _, test := range tests {
 		result := db.QuoteColumnName(test.input)
-		if result != test.output {
-			t.Errorf("QuoteColumnName(%v) = %v, expected %v", test.input, result, test.output)
-		}
+		assert.Equal(t, test.output, result, test.input)
 	}
 }
 
 func TestDB_ProcessSQL(t *testing.T) {
 	tests := []struct {
+		tag      string
 		sql      string   // original SQL
 		mysql    string   // expected MySQL version
 		postgres string   // expected PostgreSQL version
@@ -105,7 +96,7 @@ func TestDB_ProcessSQL(t *testing.T) {
 		params   []string // expected params
 	}{
 		{
-			// normal case
+			"normal case",
 			`INSERT INTO employee (id, name, age) VALUES ({:id}, {:name}, {:age})`,
 			`INSERT INTO employee (id, name, age) VALUES (?, ?, ?)`,
 			`INSERT INTO employee (id, name, age) VALUES ($1, $2, $3)`,
@@ -113,7 +104,7 @@ func TestDB_ProcessSQL(t *testing.T) {
 			[]string{"id", "name", "age"},
 		},
 		{
-			// the same placeholder is used twice
+			"the same placeholder is used twice",
 			`SELECT * FROM employee WHERE first_name LIKE {:keyword} OR last_name LIKE {:keyword}`,
 			`SELECT * FROM employee WHERE first_name LIKE ? OR last_name LIKE ?`,
 			`SELECT * FROM employee WHERE first_name LIKE $1 OR last_name LIKE $2`,
@@ -121,7 +112,7 @@ func TestDB_ProcessSQL(t *testing.T) {
 			[]string{"keyword", "keyword"},
 		},
 		{
-			// non-matching placeholder
+			"non-matching placeholder",
 			`SELECT * FROM employee WHERE first_name LIKE "{:key?word}" OR last_name LIKE {:keyword}`,
 			`SELECT * FROM employee WHERE first_name LIKE "{:key?word}" OR last_name LIKE ?`,
 			`SELECT * FROM employee WHERE first_name LIKE "{:key?word}" OR last_name LIKE $1`,
@@ -129,7 +120,7 @@ func TestDB_ProcessSQL(t *testing.T) {
 			[]string{"keyword"},
 		},
 		{
-			// quote table/column names
+			"quote table/column names",
 			`SELECT * FROM {{public.user}} WHERE [[user.id]]=1`,
 			"SELECT * FROM `public`.`user` WHERE `user`.`id`=1",
 			"SELECT * FROM \"public\".\"user\" WHERE \"user\".\"id\"=1",
@@ -147,23 +138,13 @@ func TestDB_ProcessSQL(t *testing.T) {
 
 	for _, test := range tests {
 		s1, names := mysqlDB.processSQL(test.sql)
-		if s1 != test.mysql {
-			t.Errorf("mysql: %v, expected %v", s1, test.mysql)
-		}
+		assert.Equal(t, test.mysql, s1, test.tag)
 		s2, _ := pgsqlDB.processSQL(test.sql)
-		if s2 != test.postgres {
-			t.Errorf("postgres: %v, expected %v", s2, test.postgres)
-		}
+		assert.Equal(t, test.postgres, s2, test.tag)
 		s3, _ := ociDB.processSQL(test.sql)
-		if s3 != test.oci8 {
-			t.Errorf("oci8: %v, expected %v", s3, test.oci8)
-		}
+		assert.Equal(t, test.oci8, s3, test.tag)
 
-		names1, _ := json.Marshal(names)
-		names2, _ := json.Marshal(test.params)
-		if bytes.Compare(names1, names2) != 0 {
-			t.Errorf("SQL: %v, got %v, expected %v", test.sql, string(names1), string(names2))
-		}
+		assert.Equal(t, test.params, names, test.tag)
 	}
 }
 
@@ -193,9 +174,9 @@ func TestDB_Begin(t *testing.T) {
 
 	q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
 	q.Bind(Params{"id": lastID + 1}).Row(&name)
-	assertEqual(t, name, "name1", "name1")
+	assert.Equal(t, "name1", name)
 	q.Bind(Params{"id": lastID + 2}).Row(&name)
-	assertEqual(t, name, "name2", "name2")
+	assert.Equal(t, "name2", name)
 
 	tx, _ = db.Begin()
 	_, err3 := tx.NewQuery("DELETE FROM item WHERE id=7").Execute()
@@ -208,24 +189,63 @@ func TestDB_Begin(t *testing.T) {
 	}
 }
 
-func assertEqual(t *testing.T, actual, expected interface{}, hint ...string) {
-	h := "got"
-	if len(hint) > 0 {
-		h = hint[0] + " ="
+func TestDB_Transactional(t *testing.T) {
+	db := getPreparedDB()
+
+	var (
+		lastID int
+		name   string
+	)
+	db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
+
+	err := db.Transactional(func(tx *Tx) error {
+		_, err := tx.Insert("item", Params{
+			"name": "name1",
+		}).Execute()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Insert("item", Params{
+			"name": "name2",
+		}).Execute()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if assert.Nil(t, err) {
+		q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
+		q.Bind(Params{"id": lastID + 1}).Row(&name)
+		assert.Equal(t, "name1", name)
+		q.Bind(Params{"id": lastID + 2}).Row(&name)
+		assert.Equal(t, "name2", name)
 	}
-	if actual != expected {
-		t.Errorf("%v %v, expected %v", h, actual, expected)
+
+	err = db.Transactional(func(tx *Tx) error {
+		_, err := tx.NewQuery("DELETE FROM item WHERE id=2").Execute()
+		if err != nil {
+			return err
+		}
+		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if assert.NotNil(t, err) {
+		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
+		assert.Equal(t, "Go in Action", name)
 	}
 }
 
-func assertNotEqual(t *testing.T, actual, expected interface{}, hint ...string) {
-	h := "result"
-	if len(hint) > 0 {
-		h = hint[0]
-	}
-	if actual == expected {
-		t.Errorf("%v should not be %v", h, expected)
-	}
+func TestErrors_Error(t *testing.T) {
+	errs := Errors{}
+	assert.Equal(t, "", errs.Error())
+	errs = Errors{errors.New("a")}
+	assert.Equal(t, "a", errs.Error())
+	errs = Errors{errors.New("a"), errors.New("b")}
+	assert.Equal(t, "a\nb", errs.Error())
 }
 
 func getDB() *DB {

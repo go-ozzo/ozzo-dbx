@@ -6,6 +6,8 @@ package dbx
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSelectQuery(t *testing.T) {
@@ -14,8 +16,8 @@ func TestSelectQuery(t *testing.T) {
 	// minimal select query
 	q := db.Select().From("users").Build()
 	expected := "SELECT * FROM `users`"
-	assertEqual(t, q.SQL(), expected, "t1")
-	assertEqual(t, len(q.Params()), 0, "t2")
+	assert.Equal(t, q.SQL(), expected, "t1")
+	assert.Equal(t, len(q.Params()), 0, "t2")
 
 	// a full select query
 	q = db.Select("id", "name").
@@ -41,15 +43,15 @@ func TestSelectQuery(t *testing.T) {
 		Build()
 
 	expected = "SELECT DISTINCT CALC `id`, `name`, `age` FROM `users` INNER JOIN `profile` ON user.id=profile.id WHERE ((age>30) AND (status=1)) OR (type=2) GROUP BY `id`, `age` HAVING ((id>10) AND (id<20)) OR (type=3) ORDER BY `age` DESC, `type`, `id` LIMIT 10 OFFSET 20"
-	assertEqual(t, q.SQL(), expected, "t3")
-	assertEqual(t, len(q.Params()), 2, "t4")
+	assert.Equal(t, q.SQL(), expected, "t3")
+	assert.Equal(t, len(q.Params()), 2, "t4")
 
 	// union
 	q1 := db.Select().From("users").Build()
 	q2 := db.Select().From("posts").Build()
 	q = db.Select().From("profiles").Union(q1).UnionAll(q2).Build()
 	expected = "(SELECT * FROM `profiles`) UNION (SELECT * FROM `users`) UNION ALL (SELECT * FROM `posts`)"
-	assertEqual(t, q.SQL(), expected, "t5")
+	assert.Equal(t, q.SQL(), expected, "t5")
 }
 
 func TestSelectQuery_Data(t *testing.T) {
@@ -60,19 +62,19 @@ func TestSelectQuery_Data(t *testing.T) {
 
 	var customer Customer
 	q.One(&customer)
-	assertEqual(t, customer.Email, "user1@example.com", "customer.Email")
+	assert.Equal(t, customer.Email, "user1@example.com", "customer.Email")
 
 	var customers []Customer
 	q.All(&customers)
-	assertEqual(t, len(customers), 3, "len(customers)")
+	assert.Equal(t, len(customers), 3, "len(customers)")
 
 	rows, _ := q.Rows()
 	customer.Email = ""
 	rows.one(&customer)
-	assertEqual(t, customer.Email, "user1@example.com", "customer.Email")
+	assert.Equal(t, customer.Email, "user1@example.com", "customer.Email")
 
 	var id, email string
 	q.Row(&id, &email)
-	assertEqual(t, id, "1", "id")
-	assertEqual(t, email, "user1@example.com", "email")
+	assert.Equal(t, id, "1", "id")
+	assert.Equal(t, email, "user1@example.com", "email")
 }

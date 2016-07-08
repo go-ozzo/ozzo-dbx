@@ -450,6 +450,35 @@ if err1 == nil && err2 == nil {
 }
 ```
 
+You may use `DB.Transactional()` to simplify your transactional code without explicitly committing or rolling back
+transactions. The method will start a transaction and automatically roll back the transaction if the callback
+returns an error. Otherwise it will
+automatically commit the transaction.
+
+
+```go
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
+err := db.Transactional(func(tx *dbx.Tx) error {
+	var err error
+	_, err = tx.Insert("users", dbx.Params{
+		"name": "user1",
+	}).Execute()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Insert("users", dbx.Params{
+		"name": "user2",
+	}).Execute()
+	if err != nil {
+		return err
+	}
+	return nil
+})
+
+fmt.Println(err)
+```
+
 ## Logging Executed SQL Statements
 
 When `DB.LogFunc` is configured with a compatible log function, all SQL statements being executed will be logged.

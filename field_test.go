@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultFieldMapFunc(t *testing.T) {
@@ -30,9 +32,7 @@ func TestDefaultFieldMapFunc(t *testing.T) {
 	}
 	for _, test := range tests {
 		r := DefaultFieldMapFunc(test.input)
-		if r != test.output {
-			t.Errorf("MapField(%q) = %q, expected %q", test.input, r, test.output)
-		}
+		assert.Equal(t, test.output, r, test.input)
 	}
 }
 
@@ -58,5 +58,5 @@ func TestGetFieldMap(t *testing.T) {
 	r := getFieldMap(ta, DefaultFieldMapFunc)
 
 	v, _ := json.Marshal(r)
-	assertEqual(t, string(v), `{"a1":[1,0],"a2":[1,1],"b.b1":[3,0],"c.b1":[4,0],"x1":[0],"x2":[2]}`)
+	assert.Equal(t, `{"a1":[1,0],"a2":[1,1],"b.b1":[3,0],"c.b1":[4,0],"x1":[0],"x2":[2]}`, string(v))
 }

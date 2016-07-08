@@ -6,33 +6,39 @@
 package dbx
 
 import (
+	"bytes"
 	"database/sql"
 	"regexp"
 	"strings"
 )
 
-// LogFunc logs a message for each SQL statement being executed.
-// This method takes one or multiple parameters. If a single parameter
-// is provided, it will be treated as the log message. If multiple parameters
-// are provided, they will be passed to fmt.Sprintf() to generate the log message.
-type LogFunc func(format string, a ...interface{})
+type (
+	// LogFunc logs a message for each SQL statement being executed.
+	// This method takes one or multiple parameters. If a single parameter
+	// is provided, it will be treated as the log message. If multiple parameters
+	// are provided, they will be passed to fmt.Sprintf() to generate the log message.
+	LogFunc func(format string, a ...interface{})
 
-// DB enhances sql.DB by providing a set of DB-agnostic query building methods.
-// DB allows easier query building and population of data into Go variables.
-type DB struct {
-	Builder
+	// BuilderFunc creates a Builder instance using the given DB instance and Executor.
+	BuilderFunc func(*DB, Executor) Builder
 
-	// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
-	FieldMapper FieldMapFunc
-	// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
-	LogFunc LogFunc
+	// DB enhances sql.DB by providing a set of DB-agnostic query building methods.
+	// DB allows easier query building and population of data into Go variables.
+	DB struct {
+		Builder
 
-	sqlDB      *sql.DB
-	driverName string
-}
+		// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
+		FieldMapper FieldMapFunc
+		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
+		LogFunc LogFunc
 
-// BuilderFunc creates a Builder instance using the given DB instance and Executor.
-type BuilderFunc func(*DB, Executor) Builder
+		sqlDB      *sql.DB
+		driverName string
+	}
+
+	// Errors represents a list of errors.
+	Errors []error
+)
 
 // BuilderFuncMap lists supported BuilderFunc according to DB driver names.
 // You may modify this variable to add the builder support for a new DB driver.
@@ -97,6 +103,23 @@ func (db *DB) Begin() (*Tx, error) {
 		return nil, err
 	}
 	return &Tx{db.newBuilder(tx), tx}, nil
+}
+
+// Transactional starts a transaction and executes the given function.
+// If the function returns an error, the transaction will be rolled back.
+// Otherwise, the transaction will be committed.
+func (db *DB) Transactional(f func(*Tx) error) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	if err := f(tx); err != nil {
+		if e := tx.Rollback(); e != nil {
+			return Errors{err, e}
+		}
+		return err
+	}
+	return tx.Commit()
 }
 
 // DriverName returns the name of the DB driver.
@@ -169,4 +192,16 @@ func (db *DB) newBuilder(executor Executor) Builder {
 		builderFunc = NewStandardBuilder
 	}
 	return builderFunc(db, executor)
+}
+
+// Error returns the error string of Errors.
+func (errs Errors) Error() string {
+	var b bytes.Buffer
+	for i, e := range errs {
+		if i > 0 {
+			b.WriteRune('\n')
+		}
+		b.WriteString(e.Error())
+	}
+	return b.String()
 }
