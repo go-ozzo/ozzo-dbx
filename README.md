@@ -470,10 +470,7 @@ err := db.Transactional(func(tx *dbx.Tx) error {
 	_, err = tx.Insert("users", dbx.Params{
 		"name": "user2",
 	}).Execute()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 })
 
 fmt.Println(err)
