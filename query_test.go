@@ -48,6 +48,34 @@ type Customer struct {
 	Status int
 }
 
+type CustomerPtr struct {
+	ID     *int
+	Email  *string
+	Status *int
+}
+
+type CustomerNull struct {
+	ID     ss.NullInt64
+	Email  ss.NullString
+	Status *ss.NullInt64
+}
+
+type CustomerEmbedded struct {
+	ID    int
+	Email *string
+	InnerCustomer
+}
+
+type CustomerEmbedded2 struct {
+	ID    int
+	Email *string
+	Inner InnerCustomer
+}
+
+type InnerCustomer struct {
+	Status ss.NullInt64
+}
+
 func TestQuery_Rows(t *testing.T) {
 	db := getPreparedDB()
 	defer db.Close()
@@ -97,7 +125,48 @@ func TestQuery_Rows(t *testing.T) {
 		assert.Equal(t, customer.Status, 1, "customer.Status")
 	}
 
+	// struct fields are pointers
+	var customerPtr CustomerPtr
+	sql = `SELECT * FROM customer WHERE id={:id}`
+	err = db.NewQuery(sql).Bind(Params{"id": 2}).One(&customerPtr)
+	if assert.Nil(t, err) {
+		assert.Equal(t, *customerPtr.ID, 2, "customer.ID")
+		assert.Equal(t, *customerPtr.Email, `user2@example.com`, "customer.Email")
+		assert.Equal(t, *customerPtr.Status, 1, "customer.Status")
+	}
+
+	// struct fields are null types
+	var customerNull CustomerNull
+	sql = `SELECT * FROM customer WHERE id={:id}`
+	err = db.NewQuery(sql).Bind(Params{"id": 2}).One(&customerNull)
+	if assert.Nil(t, err) {
+		assert.Equal(t, customerNull.ID.Int64, int64(2), "customer.ID")
+		assert.Equal(t, customerNull.Email.String, `user2@example.com`, "customer.Email")
+		assert.Equal(t, customerNull.Status.Int64, int64(1), "customer.Status")
+	}
+
+	// embedded with anonymous struct
+	var customerEmbedded CustomerEmbedded
+	sql = `SELECT * FROM customer WHERE id={:id}`
+	err = db.NewQuery(sql).Bind(Params{"id": 2}).One(&customerEmbedded)
+	if assert.Nil(t, err) {
+		assert.Equal(t, customerEmbedded.ID, 2, "customer.ID")
+		assert.Equal(t, *customerEmbedded.Email, `user2@example.com`, "customer.Email")
+		assert.Equal(t, customerEmbedded.Status.Int64, int64(1), "customer.Status")
+	}
+
+	// embedded with named struct
+	var customerEmbedded2 CustomerEmbedded2
+	sql = `SELECT id, email, status as "inner.status" FROM customer WHERE id={:id}`
+	err = db.NewQuery(sql).Bind(Params{"id": 2}).One(&customerEmbedded2)
+	if assert.Nil(t, err) {
+		assert.Equal(t, customerEmbedded2.ID, 2, "customer.ID")
+		assert.Equal(t, *customerEmbedded2.Email, `user2@example.com`, "customer.Email")
+		assert.Equal(t, customerEmbedded2.Inner.Status.Int64, int64(1), "customer.Status")
+	}
+
 	customer2 := NullStringMap{}
+	sql = `SELECT * FROM customer WHERE id={:id}`
 	err = db.NewQuery(sql).Bind(Params{"id": 1}).One(customer2)
 	if assert.Nil(t, err) {
 		assert.Equal(t, customer2["id"].String, "1", "customer2[id]")

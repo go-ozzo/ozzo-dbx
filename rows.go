@@ -85,11 +85,7 @@ func (r *Rows) ScanStruct(a interface{}) error {
 		}
 	}
 
-	if err := r.Scan(refs...); err != nil {
-		return err
-	}
-
-	return nil
+	return r.Scan(refs...)
 }
 
 // all populates all rows of query result into a slice of struct or NullStringMap.

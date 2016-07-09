@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"database/sql"
 	"reflect"
 	"regexp"
 	"strings"
@@ -57,6 +58,8 @@ func getFieldMap(a reflect.Type, mapper FieldMapFunc) map[string][]int {
 	return fields
 }
 
+var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+
 // buildFieldMap is called by getFieldMap recursively to build field map for a struct.
 func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string][]int, mapper FieldMapFunc) {
 	n := a.NumField()
@@ -85,7 +88,8 @@ func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string]
 				name = mapper(name)
 			}
 		}
-		if ft.Kind() != reflect.Struct {
+
+		if ft.Kind() != reflect.Struct || reflect.PtrTo(ft).Implements(scannerType) {
 			if name != "" {
 				if prefix != "" {
 					fields[prefix+"."+name] = path2
