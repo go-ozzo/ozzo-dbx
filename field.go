@@ -12,27 +12,6 @@ import (
 	"sync"
 )
 
-type fieldType struct {
-	isPK bool
-	path []int
-}
-
-type structType struct {
-	fieldTypes []fieldType
-	nameMap    map[string]fieldType
-	dbMap      map[string]fieldType
-	pk         []string
-}
-
-type structValue struct {
-	fields    map[string]reflect.Value
-	tableName string
-}
-
-func (s *structValue) pk() interface{} {
-	return nil
-}
-
 // FieldMapFunc converts a struct field name into a DB column name.
 type FieldMapFunc func(string) string
 
