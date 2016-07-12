@@ -10,7 +10,6 @@ type ModelQuery struct {
 }
 
 func (q *ModelQuery) Create(attrs ...string) error {
-	table := q.model.TableName()
 	/*
 		1. determine table name
 		2. determine field names and values

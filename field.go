@@ -20,12 +20,21 @@ type fieldMapKey struct {
 	m reflect.Value
 }
 
+type fieldInfo struct {
+	Name    string
+	ColName string
+	IsPK    bool
+	Path    []int
+}
+
+type fieldMap map[string]fieldInfo
+
 var (
 	// DbTag is the name of the struct tag used to specify the column name for the associated struct field
 	DbTag = "db"
 
 	muFieldMap sync.Mutex
-	fieldMap   = make(map[fieldMapKey]map[string][]int)
+	fieldMaps  = make(map[fieldMapKey]fieldMap)
 	fieldRegex = regexp.MustCompile(`([^A-Z_])([A-Z])`)
 )
 
@@ -42,26 +51,26 @@ func DefaultFieldMapFunc(f string) string {
 // Only exported fields are considered. For anonymous fields that are structs,
 // their exported fields will be included in the map recursively.
 // See TestGetFieldMap() for an example.
-func getFieldMap(a reflect.Type, mapper FieldMapFunc) map[string][]int {
+func getFieldMap(a reflect.Type, mapper FieldMapFunc) fieldMap {
 	muFieldMap.Lock()
 	defer muFieldMap.Unlock()
 
 	key := fieldMapKey{a, reflect.ValueOf(mapper)}
-	if m, ok := fieldMap[key]; ok {
+	if m, ok := fieldMaps[key]; ok {
 		return m
 	}
 
-	fields := make(map[string][]int)
-	buildFieldMap(a, make([]int, 0), "", fields, mapper)
-	fieldMap[key] = fields
+	fm := fieldMap{}
+	buildFieldMap(a, make([]int, 0), "", "", fm, mapper)
+	fieldMaps[key] = fm
 
-	return fields
+	return fm
 }
 
 var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 
 // buildFieldMap is called by getFieldMap recursively to build field map for a struct.
-func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string][]int, mapper FieldMapFunc) {
+func buildFieldMap(a reflect.Type, path []int, namePrefix, colPrefix string, fm fieldMap, mapper FieldMapFunc) {
 	n := a.NumField()
 	for i := 0; i < n; i++ {
 		field := a.Field(i)
@@ -81,40 +90,47 @@ func buildFieldMap(a reflect.Type, path []int, prefix string, fields map[string]
 			ft = ft.Elem()
 		}
 
-		name := tag
-		if name == "" && !field.Anonymous {
-			name = field.Name
+		colName := tag
+		name := field.Name
+		if colName == "" && !field.Anonymous {
+			colName = field.Name
 			if mapper != nil {
-				name = mapper(name)
+				colName = mapper(colName)
 			}
 		}
-
-		if ft.Kind() != reflect.Struct || reflect.PtrTo(ft).Implements(scannerType) {
-			if name != "" {
-				if prefix != "" {
-					fields[prefix+"."+name] = path2
-				} else {
-					fields[name] = path2
-				}
-			}
-			continue
+		if field.Anonymous {
+			name = ""
 		}
 
-		if name == "" {
-			buildFieldMap(ft, path2, prefix, fields, mapper)
-		} else {
-			p := name
-			if prefix != "" {
-				p = prefix + "." + p
+		if ft.Kind() == reflect.Struct && !reflect.PtrTo(ft).Implements(scannerType) {
+			// dive into non-scanner struct
+			buildFieldMap(ft, path2, concat(namePrefix, name), concat(colPrefix, colName), fm, mapper)
+		} else if colName != "" {
+			// non-anonymous scanner or struct field
+			colName = concat(colPrefix, colName)
+			fm[colName] = fieldInfo{
+				Name:    concat(namePrefix, name),
+				ColName: colName,
+				IsPK:    false,
+				Path:    path2,
 			}
-			buildFieldMap(ft, path2, p, fields, mapper)
 		}
 	}
 }
 
+func concat(s1, s2 string) string {
+	if s1 == "" {
+		return s2
+	} else if s2 == "" {
+		return s1
+	} else {
+		return s1 + "." + s2
+	}
+}
+
 // getStructField returns the reflection value of the field specified by its field map path.
-func getStructField(a reflect.Value, path []int) reflect.Value {
-	for _, i := range path {
+func (fi fieldInfo) getStructField(a reflect.Value) reflect.Value {
+	for _, i := range fi.Path {
 		a = indirect(a.Field(i))
 	}
 	return a
