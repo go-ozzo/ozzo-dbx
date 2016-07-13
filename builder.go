@@ -23,6 +23,9 @@ type Builder interface {
 	// The parameters to this method should be the list column names to be selected.
 	// A column name may have an optional alias name. For example, Select("id", "my_name AS name").
 	Select(...string) *SelectQuery
+	// ModelQuery returns a new ModelQuery object that can be used to perform model insertion, update, and deletion.
+	// The parameter to this method should be a pointer to the model struct that needs to be inserted, updated, or deleted.
+	Model(interface{}) *ModelQuery
 
 	// GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.
 	GeneratePlaceholder(int) string
@@ -134,6 +137,10 @@ func (b *BaseBuilder) NewQuery(sql string) *Query {
 // A column name may have an optional alias name. For example, Select("id", "my_name AS name").
 func (b *BaseBuilder) Select(cols ...string) *SelectQuery {
 	return NewSelectQuery(b.db.Builder, b.executor).Select(cols...)
+}
+
+func (b *BaseBuilder) Model(model interface{}) *ModelQuery {
+	return newModelQuery(model)
 }
 
 // GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.

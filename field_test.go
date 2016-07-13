@@ -5,8 +5,6 @@
 package dbx
 
 import (
-	"encoding/json"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,18 +43,19 @@ type FB struct {
 	B1 string
 }
 
-func TestGetFieldMap(t *testing.T) {
-	var a struct {
-		X1 string
-		FA
-		X2 int
-		B  *FB
-		FB `db:"c"`
-		c  int
-	}
-	ta := reflect.TypeOf(a)
-	r := getFieldMap(ta, DefaultFieldMapFunc)
-
-	v, _ := json.Marshal(r)
-	assert.Equal(t, `{"a1":[1,0],"a2":[1,1],"b.b1":[3,0],"c.b1":[4,0],"x1":[0],"x2":[2]}`, string(v))
-}
+//
+//func TestGetFieldMap(t *testing.T) {
+//	var a struct {
+//		X1 string
+//		FA
+//		X2 int
+//		B  *FB
+//		FB `db:"c"`
+//		c  int
+//	}
+//	ta := reflect.TypeOf(a)
+//	r := getFieldMap(ta, DefaultFieldMapFunc)
+//
+//	v, _ := json.Marshal(r)
+//	assert.Equal(t, `{"a1":[1,0],"a2":[1,1],"b.b1":[3,0],"c.b1":[4,0],"x1":[0],"x2":[2]}`, string(v))
+//}

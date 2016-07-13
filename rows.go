@@ -72,14 +72,14 @@ func (r *Rows) ScanStruct(a interface{}) error {
 		return VarTypeError("must be a pointer to a struct")
 	}
 
-	fm := getFieldMap(rv.Type(), r.fieldMapFunc)
+	si := getStructInfo(rv.Type(), r.fieldMapFunc)
 
 	cols, _ := r.Columns()
 	refs := make([]interface{}, len(cols))
 
 	for i, col := range cols {
-		if fi, ok := fm[col]; ok {
-			refs[i] = fi.getStructField(rv).Addr().Interface()
+		if fi, ok := si.dbNameMap[col]; ok {
+			refs[i] = fi.getField(rv).Addr().Interface()
 		} else {
 			refs[i] = &sql.NullString{}
 		}
@@ -124,15 +124,15 @@ func (r *Rows) all(slice interface{}) error {
 		return VarTypeError("must be a slice of struct or NullStringMap")
 	}
 
-	fm := getFieldMap(t.Elem(), r.fieldMapFunc)
+	si := getStructInfo(t.Elem(), r.fieldMapFunc)
 
 	cols, _ := r.Columns()
 	for r.Next() {
 		ev := reflect.New(et).Elem()
 		refs := make([]interface{}, len(cols))
 		for i, col := range cols {
-			if fi, ok := fm[col]; ok {
-				refs[i] = fi.getStructField(ev).Addr().Interface()
+			if fi, ok := si.dbNameMap[col]; ok {
+				refs[i] = fi.getField(ev).Addr().Interface()
 			} else {
 				refs[i] = &sql.NullString{}
 			}
