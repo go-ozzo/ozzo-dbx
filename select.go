@@ -11,8 +11,7 @@ import (
 // SelectQuery represents a DB-agnostic SELECT query.
 // It can be built into a DB-specific query by calling the Build() method.
 type SelectQuery struct {
-	builder  Builder
-	executor Executor
+	builder Builder
 
 	selects      []string
 	distinct     bool
@@ -43,18 +42,17 @@ type UnionInfo struct {
 }
 
 // NewSelectQuery creates a new SelectQuery instance.
-func NewSelectQuery(builder Builder, executor Executor) *SelectQuery {
+func NewSelectQuery(builder Builder) *SelectQuery {
 	return &SelectQuery{
-		builder:  builder,
-		executor: executor,
-		selects:  []string{},
-		from:     []string{},
-		join:     []JoinInfo{},
-		orderBy:  []string{},
-		groupBy:  []string{},
-		union:    []UnionInfo{},
-		limit:    -1,
-		params:   Params{},
+		builder: builder,
+		selects: []string{},
+		from:    []string{},
+		join:    []JoinInfo{},
+		orderBy: []string{},
+		groupBy: []string{},
+		union:   []UnionInfo{},
+		limit:   -1,
+		params:  Params{},
 	}
 }
 

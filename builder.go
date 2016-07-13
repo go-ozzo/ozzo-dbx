@@ -136,11 +136,13 @@ func (b *BaseBuilder) NewQuery(sql string) *Query {
 // The parameters to this method should be the list column names to be selected.
 // A column name may have an optional alias name. For example, Select("id", "my_name AS name").
 func (b *BaseBuilder) Select(cols ...string) *SelectQuery {
-	return NewSelectQuery(b.db.Builder, b.executor).Select(cols...)
+	return NewSelectQuery(b.db.Builder).Select(cols...)
 }
 
+// Model returns a new ModelQuery object that can be used to perform model-based DB operations.
+// The model passed to this method should be a pointer to a model struct.
 func (b *BaseBuilder) Model(model interface{}) *ModelQuery {
-	return newModelQuery(model)
+	return newModelQuery(model, b.db.FieldMapper, b.db.Builder)
 }
 
 // GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.

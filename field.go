@@ -33,7 +33,6 @@ func DefaultFieldMapFunc(f string) string {
 type fieldInfo struct {
 	name   string
 	dbName string
-	isPK   bool
 	path   []int
 }
 
@@ -54,7 +53,7 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() {
 		return nil
 	}
-	t := reflect.TypeOf(model)
+	t := reflect.TypeOf(model).Elem()
 	var tableName string
 	if tm, ok := model.(TableModel); ok {
 		tableName = tm.TableName()
@@ -65,25 +64,32 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 	si := getStructInfo(t, mapper)
 	return &structValue{
 		structInfo: si,
-		value:      value,
+		value:      value.Elem(),
 		tableName:  tableName,
 	}
 }
 
 func (s *structValue) pk() map[string]interface{} {
-	return s.fields(s.pkNames...)
+	return s.columns(s.pkNames, nil)
 }
 
-func (s *structValue) fields(attrs ...string) map[string]interface{} {
+func (s *structValue) columns(include, exclude []string) map[string]interface{} {
 	v := map[string]interface{}{}
-	if len(attrs) == 0 {
+	if len(include) == 0 {
 		for _, fi := range s.nameMap {
 			v[fi.dbName] = fi.getValue(s.value)
 		}
 	} else {
-		for _, attr := range attrs {
+		for _, attr := range include {
 			if fi, ok := s.nameMap[attr]; ok {
 				v[fi.dbName] = fi.getValue(s.value)
+			}
+		}
+	}
+	if len(exclude) > 0 {
+		for _, name := range exclude {
+			if fi, ok := s.nameMap[name]; ok {
+				delete(v, fi.dbName)
 			}
 		}
 	}
@@ -179,7 +185,6 @@ func buildStructInfo(si *structInfo, a reflect.Type, path []int, namePrefix, dbN
 			fi := &fieldInfo{
 				name:   concat(namePrefix, name),
 				dbName: concat(dbNamePrefix, dbName),
-				isPK:   false,
 				path:   path2,
 			}
 			si.nameMap[fi.name] = fi
