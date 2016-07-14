@@ -5,9 +5,9 @@
 package dbx
 
 import (
-	"testing"
-
+	"database/sql"
 	"reflect"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -65,6 +65,31 @@ func Test_indirect(t *testing.T) {
 	if assert.NotNil(t, b) {
 		assert.Equal(t, 0, *b)
 	}
+}
+
+func Test_structValue_columns(t *testing.T) {
+	customer := Customer{
+		ID:     1,
+		Name:   "abc",
+		Status: 2,
+		Email:  "abc@example.com",
+	}
+	sv := newStructValue(&customer, DefaultFieldMapFunc)
+	cols := sv.columns(nil, nil)
+	assert.Equal(t, map[string]interface{}{"id": 1, "name": "abc", "status": 2, "email": "abc@example.com", "address": sql.NullString{}}, cols)
+
+	cols = sv.columns([]string{"ID", "name"}, nil)
+	assert.Equal(t, map[string]interface{}{"id": 1}, cols)
+
+	cols = sv.columns([]string{"ID", "Name"}, []string{"ID"})
+	assert.Equal(t, map[string]interface{}{"name": "abc"}, cols)
+
+	cols = sv.columns(nil, []string{"ID", "Address"})
+	assert.Equal(t, map[string]interface{}{"name": "abc", "status": 2, "email": "abc@example.com"}, cols)
+
+	sv = newStructValue(&customer, nil)
+	cols = sv.columns([]string{"ID", "Name"}, []string{"ID"})
+	assert.Equal(t, map[string]interface{}{"Name": "abc"}, cols)
 }
 
 type FA struct {

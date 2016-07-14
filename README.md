@@ -17,6 +17,7 @@ as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It h
 * Populating data into structs and NullString maps
 * Named parameter binding
 * DB-agnostic query building methods, including SELECT queries, data manipulation queries, and schema manipulation queries
+* Inserting, updating, and deleting model structs
 * Powerful query condition building
 * Open architecture allowing addition of new database support or customization of existing support
 * Logging executed SQL statements
@@ -409,6 +410,86 @@ q := db.CreateTable("users", map[string]string{
 	"name": "varchar(255)",
 })
 q.Execute()
+```
+
+## Inserting, Updating, and Deleting Model Structs
+
+Although ozzo-dbx is not an ORM, it provides a convenient way to insert, update, and delete table rows based
+on structs (called models). By calling `DB.Model()`, you create a model-based query which allows to insert,
+update, or delete the specified model in a database table.
+
+### Conventions
+
+By convention, the table name is the snake case of the model struct name (e.g. a struct named `MyCustomer`
+corresponds to the table name `my_customer`); and the table primary key is `id` which corresponds to either
+the `ID` or `Id` struct field.
+
+You can implement the `TableModel` interface to explicitly specify the table name that a struct should be associated with.
+And you can tag a struct field with `db:"pk"` to indicate that field is used for primary key.
+If you also want to explicitly specify the associated column name for that field, use the tag format `db:"pk,col_name"`.
+
+### Insertion
+
+To insert a model, simply call the `ModelQuery.Insert()` method. For example,
+
+```go
+type Customer struct {
+	ID int
+	Name string
+	Email string
+	Status int
+}
+
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
+customer := Customer{
+	Name: "example",
+	Email: "test@example.com",
+}
+err := db.Model(&customer).Insert()
+```
+
+This will insert a row with *all* public fields in the struct. If a primary key field is empty, it is assumed to be
+auto-incremental and will be automatically filled with the last insertion ID after a successful insertion.
+
+You can explicitly specify the fields that should be inserted by passing the list of the field names to the `Insert()` method.
+You can also exclude certain fields from being inserted by calling `Exclude()` before calling `Insert()`. For example,
+
+```go
+// insert only Name and Email fields
+db.Model(&customer).Insert("Name", "Email")
+// insert all public fields except Status
+db.Model(&customer).Exclude("Status").Insert()
+// insert only Name
+db.Model(&customer).Exclude("Status").Insert("Name", "Status")
+```
+
+### Update
+
+To update a model, call the `ModelQuery.Update()` method. Like `Insert()`, by default, the `Update()` method will
+update *all* public fields except primary key fields of the model. You can explicitly specify which fields can
+be updated and which cannot in the same way as described for the `Insert()` method. For example,
+
+```go
+// update all public fields of customer
+db.Model(&customer).Update()
+// update only Status
+db.Model(&customer).Update("Status")
+// update all public fields except Status
+db.Model(&customer).Exclude("Status").Update()
+```
+
+Note that the `Update()` method assumes that the primary keys are immutable and uses the primary key value of the model
+to look for the row that should be updated. An error will be returned if a model does not define a primary key.
+
+
+### Deletion
+
+To delete a model, call the `ModelQuery.Delete()` method. The method deletes the row using the primary key value
+specified by the model. For example,
+
+```go
+db.Model(&customer).Delete()
 ```
 
 ## Quoting Table and Column Names

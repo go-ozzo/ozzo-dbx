@@ -99,6 +99,9 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 }
 
 func (s *structValue) pk() map[string]interface{} {
+	if len(s.pkNames) == 0 {
+		return nil
+	}
 	return s.columns(s.pkNames, nil)
 }
 
@@ -201,6 +204,8 @@ func (si *structInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix
 	if len(si.pkNames) == 0 {
 		if _, ok := si.nameMap["ID"]; ok {
 			si.pkNames = append(si.pkNames, "ID")
+		} else if _, ok := si.nameMap["Id"]; ok {
+			si.pkNames = append(si.pkNames, "Id")
 		}
 	}
 }
