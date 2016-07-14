@@ -108,6 +108,9 @@ func TestModelQuery_Insert(t *testing.T) {
 			assert.False(t, c.Address.Valid)
 		}
 	}
+
+	var a int
+	assert.NotNil(t, db.Model(&a).Insert())
 }
 
 func TestModelQuery_Update(t *testing.T) {

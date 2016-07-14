@@ -7,6 +7,8 @@ package dbx
 import (
 	"testing"
 
+	"reflect"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,6 +33,37 @@ func TestDefaultFieldMapFunc(t *testing.T) {
 	for _, test := range tests {
 		r := DefaultFieldMapFunc(test.input)
 		assert.Equal(t, test.output, r, test.input)
+	}
+}
+
+func Test_concat(t *testing.T) {
+	assert.Equal(t, "a.b", concat("a", "b"))
+	assert.Equal(t, "a", concat("a", ""))
+	assert.Equal(t, "b", concat("", "b"))
+}
+
+func Test_parseTag(t *testing.T) {
+	name, pk := parseTag("abc")
+	assert.Equal(t, "abc", name)
+	assert.False(t, pk)
+
+	name, pk = parseTag("pk,abc")
+	assert.Equal(t, "abc", name)
+	assert.True(t, pk)
+
+	name, pk = parseTag("pk")
+	assert.Equal(t, "", name)
+	assert.True(t, pk)
+}
+
+func Test_indirect(t *testing.T) {
+	var a int
+	assert.Equal(t, reflect.ValueOf(a).Kind(), indirect(reflect.ValueOf(a)).Kind())
+	var b *int
+	bi := indirect(reflect.ValueOf(&b))
+	assert.Equal(t, reflect.ValueOf(a).Kind(), bi.Kind())
+	if assert.NotNil(t, b) {
+		assert.Equal(t, 0, *b)
 	}
 }
 
