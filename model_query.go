@@ -53,7 +53,7 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 		if err != nil {
 			return err
 		}
-		q.model.dbNameMap[ai].getField(q.model.value).SetInt(pkValue)
+		indirect(q.model.dbNameMap[ai].getField(q.model.value)).SetInt(pkValue)
 	}
 	return err
 }

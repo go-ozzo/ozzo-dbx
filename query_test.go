@@ -43,27 +43,49 @@ func TestQuery_Execute(t *testing.T) {
 }
 
 type Customer struct {
-	ID     int
-	Email  string
-	Status int
+	ID      int
+	Email   string
+	Status  int
+	Name    string
+	Address ss.NullString
+}
+
+func (m *Customer) TableName() string {
+	return "customer"
 }
 
 type CustomerPtr struct {
-	ID     *int
-	Email  *string
-	Status *int
+	ID      *int `db:"pk"`
+	Email   *string
+	Status  *int
+	Name    string
+	Address *string
+}
+
+func (m *CustomerPtr) TableName() string {
+	return "customer"
 }
 
 type CustomerNull struct {
-	ID     ss.NullInt64
-	Email  ss.NullString
-	Status *ss.NullInt64
+	ID      ss.NullInt64 `db:"pk,id"`
+	Email   ss.NullString
+	Status  *ss.NullInt64
+	Name    string
+	Address ss.NullString
+}
+
+func (m CustomerNull) TableName() string {
+	return "customer"
 }
 
 type CustomerEmbedded struct {
 	ID    int
 	Email *string
 	InnerCustomer
+}
+
+func (m *CustomerEmbedded) TableName() string {
+	return "customer"
 }
 
 type CustomerEmbedded2 struct {
@@ -73,7 +95,9 @@ type CustomerEmbedded2 struct {
 }
 
 type InnerCustomer struct {
-	Status ss.NullInt64
+	Status  ss.NullInt64
+	Name    *string
+	Address ss.NullString
 }
 
 func TestQuery_Rows(t *testing.T) {
@@ -123,6 +147,19 @@ func TestQuery_Rows(t *testing.T) {
 		assert.Equal(t, customer.ID, 2, "customer.ID")
 		assert.Equal(t, customer.Email, `user2@example.com`, "customer.Email")
 		assert.Equal(t, customer.Status, 1, "customer.Status")
+	}
+
+	var customerPtr2 CustomerPtr
+	sql = `SELECT id, email, address FROM customer WHERE id=2`
+	rows2, err := db.sqlDB.Query(sql)
+	defer rows2.Close()
+	assert.Nil(t, err)
+	rows2.Next()
+	err = rows2.Scan(&customerPtr2.ID, &customerPtr2.Email, &customerPtr2.Address)
+	if assert.Nil(t, err) {
+		assert.Equal(t, *customerPtr2.ID, 2, "customer.ID")
+		assert.Equal(t, *customerPtr2.Email, `user2@example.com`)
+		assert.Nil(t, customerPtr2.Address)
 	}
 
 	// struct fields are pointers

@@ -111,10 +111,11 @@ func (fi *fieldInfo) getValue(a reflect.Value) interface{} {
 
 // getStructField returns the reflection value of the field specified by its field map path.
 func (fi *fieldInfo) getField(a reflect.Value) reflect.Value {
-	for _, i := range fi.path {
-		a = indirect(a.Field(i))
+	i := 0
+	for ; i < len(fi.path)-1; i++ {
+		a = indirect(a.Field(fi.path[i]))
 	}
-	return a
+	return a.Field(fi.path[i])
 }
 
 type structInfoMapKey struct {

@@ -1,6 +1,7 @@
 package dbx
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,20 +26,87 @@ func TestModelQuery_Insert(t *testing.T) {
 	defer db.Close()
 
 	name := "test"
-	item := Item{
-		Name: name,
-	}
-	err := db.Model(&item).Insert()
-	if assert.Nil(t, err) {
-		assert.Equal(t, 6, item.ID)
+	email := "test@example.com"
+
+	{
+		customer := Customer{
+			Name:  name,
+			Email: email,
+		}
+		err := db.Model(&customer).Insert()
+		if assert.Nil(t, err) {
+			assert.Equal(t, 4, customer.ID)
+			var c Customer
+			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
+			assert.Equal(t, name, c.Name)
+			assert.Equal(t, email, c.Email)
+			assert.Equal(t, 0, c.Status)
+			assert.False(t, c.Address.Valid)
+		}
 	}
 
-	item2 := Item2{
-		Name: &name,
+	{
+		customer := CustomerPtr{
+			Name:  name,
+			Email: &email,
+		}
+		err := db.Model(&customer).Insert()
+		if assert.Nil(t, err) && assert.NotNil(t, customer.ID) {
+			assert.Equal(t, 5, *customer.ID)
+			var c CustomerPtr
+			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
+			assert.Equal(t, name, c.Name)
+			if assert.NotNil(t, c.Email) {
+				assert.Equal(t, email, *c.Email)
+			}
+			if assert.NotNil(t, c.Status) {
+				assert.Equal(t, 0, *c.Status)
+			}
+			assert.Nil(t, c.Address)
+		}
 	}
-	err = db.Model(&item2).Insert()
-	if assert.Nil(t, err) && assert.NotNil(t, item2.ID) {
-		assert.Equal(t, 7, *item2.ID)
+
+	{
+		customer := CustomerNull{
+			Name:  name,
+			Email: sql.NullString{email, true},
+		}
+		err := db.Model(&customer).Insert()
+		if assert.Nil(t, err) {
+			// potential todo:
+			// assert.Equal(t, int64(6), customerNull.ID.Int64)
+			var c CustomerNull
+			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
+			assert.Equal(t, name, c.Name)
+			assert.Equal(t, email, c.Email.String)
+			if assert.NotNil(t, c.Status) {
+				assert.Equal(t, int64(0), c.Status.Int64)
+			}
+			assert.False(t, c.Address.Valid)
+		}
+	}
+
+	{
+		customer := CustomerEmbedded{
+			ID:    100,
+			Email: &email,
+			InnerCustomer: InnerCustomer{
+				Name:   &name,
+				Status: sql.NullInt64{1, true},
+			},
+		}
+		err := db.Model(&customer).Insert()
+		if assert.Nil(t, err) {
+			assert.Equal(t, 100, customer.ID)
+			var c CustomerEmbedded
+			db.Select().From("customer").Where(HashExp{"ID": 100}).One(&c)
+			assert.Equal(t, name, *c.Name)
+			assert.Equal(t, email, *c.Email)
+			if assert.NotNil(t, c.Status) {
+				assert.Equal(t, int64(1), c.Status.Int64)
+			}
+			assert.False(t, c.Address.Valid)
+		}
 	}
 }
 
