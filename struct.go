@@ -82,19 +82,11 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() {
 		return nil
 	}
-	t := reflect.TypeOf(model).Elem()
-	var tableName string
-	if tm, ok := model.(TableModel); ok {
-		tableName = tm.TableName()
-	} else {
-		tableName = DefaultFieldMapFunc(t.Name())
-	}
 
-	si := getStructInfo(t, mapper)
 	return &structValue{
-		structInfo: si,
+		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), mapper),
 		value:      value.Elem(),
-		tableName:  tableName,
+		tableName:  getTableName(model),
 	}
 }
 
@@ -240,4 +232,19 @@ func indirect(v reflect.Value) reflect.Value {
 		v = v.Elem()
 	}
 	return v
+}
+
+// getTableName returns the table name corresponding to the given model struct or slice of structs.
+func getTableName(a interface{}) string {
+	if tm, ok := a.(TableModel); ok {
+		return tm.TableName()
+	}
+	t := reflect.TypeOf(a)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() == reflect.Slice {
+		return getTableName(reflect.Zero(t.Elem()).Interface())
+	}
+	return DefaultFieldMapFunc(t.Name())
 }

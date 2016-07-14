@@ -92,6 +92,31 @@ func Test_structValue_columns(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{"Name": "abc"}, cols)
 }
 
+type MyCustomer struct{}
+
+func Test_getTableName(t *testing.T) {
+	var c1 Customer
+	assert.Equal(t, "customer", getTableName(c1))
+
+	var c2 *Customer
+	assert.Equal(t, "customer", getTableName(c2))
+
+	var c3 MyCustomer
+	assert.Equal(t, "my_customer", getTableName(c3))
+
+	var c4 []Customer
+	assert.Equal(t, "customer", getTableName(c4))
+
+	var c5 *[]Customer
+	assert.Equal(t, "customer", getTableName(c5))
+
+	var c6 []MyCustomer
+	assert.Equal(t, "my_customer", getTableName(c6))
+
+	var c7 **int
+	assert.Equal(t, "", getTableName(c7))
+}
+
 type FA struct {
 	A1 string
 	A2 int

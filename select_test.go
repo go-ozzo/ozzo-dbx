@@ -7,6 +7,8 @@ package dbx
 import (
 	"testing"
 
+	"database/sql"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,4 +79,46 @@ func TestSelectQuery_Data(t *testing.T) {
 	q.Row(&id, &email)
 	assert.Equal(t, id, "1", "id")
 	assert.Equal(t, email, "user1@example.com", "email")
+}
+
+func TestSelectQuery_Model(t *testing.T) {
+	db := getPreparedDB()
+	defer db.Close()
+
+	{
+		// One without specifying FROM
+		var customer Customer
+		err := db.Select().OrderBy("id").One(&customer)
+		if assert.Nil(t, err) {
+			assert.Equal(t, "user1@example.com", customer.Email)
+		}
+	}
+
+	{
+		// All without specifying FROM
+		var customers []Customer
+		err := db.Select().OrderBy("id").All(&customers)
+		if assert.Nil(t, err) {
+			assert.Equal(t, 3, len(customers))
+		}
+	}
+
+	{
+		// Model without specifying FROM
+		var customer Customer
+		err := db.Select().Model(2, &customer)
+		if assert.Nil(t, err) {
+			assert.Equal(t, "user2@example.com", customer.Email)
+		}
+	}
+
+	{
+		// Model with WHERE
+		var customer Customer
+		err := db.Select().Where(HashExp{"id": 1}).Model(2, &customer)
+		assert.Equal(t, sql.ErrNoRows, err)
+
+		err = db.Select().Where(HashExp{"id": 2}).Model(2, &customer)
+		assert.Nil(t, err)
+	}
 }

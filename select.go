@@ -5,12 +5,17 @@
 package dbx
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 )
 
 // SelectQuery represents a DB-agnostic SELECT query.
 // It can be built into a DB-specific query by calling the Build() method.
 type SelectQuery struct {
+	// FieldMapper maps struct field names to DB column names.
+	FieldMapper FieldMapFunc
+
 	builder Builder
 
 	selects      []string
@@ -262,15 +267,60 @@ func (s *SelectQuery) Build() *Query {
 	return s.builder.NewQuery(sql).Bind(params)
 }
 
-// One builds and executes the SELECT query and populates the first row of the result into the specified variable.
-// This is a shortcut to SelectQuery.Build().One()
+// One executes the SELECT query and populates the first row of the result into the specified variable.
+//
+// If the query does not specify a "from" clause, the method will try to infer the name of the table
+// to be selected from by calling getTableName() which will return either the variable type name
+// or the TableName() method if the variable implements the TableModel interface.
+//
+// Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (s *SelectQuery) One(a interface{}) error {
+	if len(s.from) == 0 {
+		if tableName := getTableName(a); tableName != "" {
+			s.from = []string{tableName}
+		}
+	}
 	return s.Build().One(a)
 }
 
-// All builds and executes the SELECT query and populates all rows of the result into the specified variable.
-// This is a shortcut to SelectQuery.Build().All()
+// Model selects the row with the specified primary key and populates the model with the row data.
+//
+// The model variable should be a pointer to a struct. If the query does not specify a "from" clause,
+// it will use the model struct to determine which table to select data from. It will also use the model
+// to infer the name of the primary key column. Only simple primary key is supported. For composite primary keys,
+// please use Where() to specify the filtering condition.
+func (s *SelectQuery) Model(pk, model interface{}) error {
+	t := reflect.TypeOf(model)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return VarTypeError("must be a pointer to a struct")
+	}
+	si := getStructInfo(t, s.FieldMapper)
+	if len(si.pkNames) == 1 {
+		return s.AndWhere(HashExp{si.nameMap[si.pkNames[0]].dbName: pk}).One(model)
+	}
+
+	if len(si.pkNames) == 0 {
+		return MissingPKError
+	}
+	return errors.New("composite primary key is not supported")
+}
+
+// All executes the SELECT query and populates all rows of the result into a slice.
+//
+// Note that the slice must be passed in as a pointer.
+//
+// If the query does not specify a "from" clause, the method will try to infer the name of the table
+// to be selected from by calling getTableName() which will return either the type name of the slice elements
+// or the TableName() method if the slice element implements the TableModel interface.
 func (s *SelectQuery) All(slice interface{}) error {
+	if len(s.from) == 0 {
+		if tableName := getTableName(slice); tableName != "" {
+			s.from = []string{tableName}
+		}
+	}
 	return s.Build().All(slice)
 }
 
