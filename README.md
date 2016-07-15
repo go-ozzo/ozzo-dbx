@@ -412,31 +412,32 @@ q := db.CreateTable("users", map[string]string{
 q.Execute()
 ```
 
-## Inserting, Updating, and Deleting Model Structs
+## CRUD Operations
 
-Although ozzo-dbx is not an ORM, it provides a convenient way to insert, update, and delete table rows based
-on structs (called models). By calling `DB.Model()`, you create a model-based query which allows to insert,
-update, or delete the specified model in a database table.
+Although ozzo-dbx is not an ORM, it does provide a very convenient way to do typical CRUD (Create, Read, Update, Delete)
+operations without the need of writing plain SQL statements.
 
-### Conventions
+To use the CRUD feature, first define a struct type for a table. By default, a struct is associated with a table
+whose name is the snake case version of the struct type name. For example, a struct named `MyCustomer`
+corresponds to the table name `my_customer`. You may explicitly specify the table name for a struct by implementing
+the `dbx.TableModel` interface. That is, define a struct method named `TableName` which should return the actual
+table name.
 
-By convention, the table name is the snake case of the model struct name (e.g. a struct named `MyCustomer`
-corresponds to the table name `my_customer`); and the table primary key is `id` which corresponds to either
-the `ID` or `Id` struct field.
+If the struct has a field named `ID` or `Id`, by default the field will be treated as the primary key field.
+If you want to use a different field as the primary key, tag it with `db:"pk"`. You may tag multiple fields
+for composite primary keys. Note that if you also want to explicitly specify the column name for a primary key field,
+you should use the tag format `db:"pk,col_name"`.
 
-You can implement the `TableModel` interface to explicitly specify the table name that a struct should be associated with.
-And you can tag a struct field with `db:"pk"` to indicate that field is used for primary key.
-If you also want to explicitly specify the associated column name for that field, use the tag format `db:"pk,col_name"`.
 
-### Insertion
+### Create
 
-To insert a model, simply call the `ModelQuery.Insert()` method. For example,
+To create (insert) a new row using a model, call the `ModelQuery.Insert()` method. For example,
 
 ```go
 type Customer struct {
-	ID int
-	Name string
-	Email string
+	ID     int
+	Name   string
+	Email  string
 	Status int
 }
 
@@ -446,16 +447,20 @@ customer := Customer{
 	Name: "example",
 	Email: "test@example.com",
 }
+// INSERT INTO customer (name, email) VALUES ('example', 'test@example.com')
 err := db.Model(&customer).Insert()
 ```
 
-This will insert a row with *all* public fields in the struct. If a primary key field is empty, it is assumed to be
-auto-incremental and will be automatically filled with the last insertion ID after a successful insertion.
+This will insert a row using the values from *all* public fields in the struct. If a primary key field is empty,
+it is assumed to be auto-incremental and will be automatically filled with the last insertion ID after
+a successful insertion.
 
 You can explicitly specify the fields that should be inserted by passing the list of the field names to the `Insert()` method.
 You can also exclude certain fields from being inserted by calling `Exclude()` before calling `Insert()`. For example,
 
 ```go
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
 // insert only Name and Email fields
 db.Model(&customer).Insert("Name", "Email")
 // insert all public fields except Status
@@ -464,6 +469,42 @@ db.Model(&customer).Exclude("Status").Insert()
 db.Model(&customer).Exclude("Status").Insert("Name", "Status")
 ```
 
+### Read
+
+To read a model by a given primary key value, call `SelectQuery.Model()`.
+
+```go
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
+var customer Customer
+// SELECT * FROM customer WHERE id=100
+db.Select().Model(100, &customer)
+
+// SELECT name, email FROM customer WHERE status=1 AND id=100
+db.Select("name", "email").Where(dbx.HashExp{"status": 1}).Model(100, &customer)
+```
+
+Note that `SelectQuery.Model()` does not support composite primary keys. You should use `SelectQuery.One()` in this case.
+For example,
+
+```go
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
+var orderItem OrderItem
+
+// SELECT * FROM order_item WHERE order_id=100 AND item_id=20
+db.Select().Where(dbx.HashExp{"order_id": 100, "item_id": 20}).One(&orderItem)
+```
+
+In the above queries, we do not call `From()` to specify which table to select data from. This is because the select
+query automatically sets the table according to the model struct being populated. If the struct implements `TableModel`,
+the value returned by its `TableName()` method will be used as the table name. Otherwise, the snake case version
+of the struct type name will be the table name.
+
+You may also call `SelectQuery.All()` to read a list of model structs. Similarly, you do not need to call `From()`
+if the table name can be inferred from the model structs.
+
+
 ### Update
 
 To update a model, call the `ModelQuery.Update()` method. Like `Insert()`, by default, the `Update()` method will
@@ -471,6 +512,8 @@ update *all* public fields except primary key fields of the model. You can expli
 be updated and which cannot in the same way as described for the `Insert()` method. For example,
 
 ```go
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
 // update all public fields of customer
 db.Model(&customer).Update()
 // update only Status
@@ -479,16 +522,18 @@ db.Model(&customer).Update("Status")
 db.Model(&customer).Exclude("Status").Update()
 ```
 
-Note that the `Update()` method assumes that the primary keys are immutable and uses the primary key value of the model
-to look for the row that should be updated. An error will be returned if a model does not define a primary key.
+Note that the `Update()` method assumes that the primary keys are immutable. It uses the primary key value of the model
+to look for the row that should be updated. An error will be returned if a model does not have a primary key.
 
 
-### Deletion
+### Delete
 
 To delete a model, call the `ModelQuery.Delete()` method. The method deletes the row using the primary key value
-specified by the model. For example,
+specified by the model. If the model does not have a primary key, an error will be returned. For example,
 
 ```go
+db, _ := dbx.Open("mysql", "user:pass@/example")
+
 db.Model(&customer).Delete()
 ```
 

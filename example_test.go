@@ -7,7 +7,7 @@ import (
 )
 
 // This example shows how to populate DB data in different ways.
-func Example_1() {
+func Example_dbQueries() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
 	// create a new query
@@ -39,7 +39,7 @@ func Example_1() {
 }
 
 // This example shows how to use query builder to build DB queries.
-func Example_2() {
+func Example_queryBuilder() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
 	// build a SELECT query
@@ -63,23 +63,45 @@ func Example_2() {
 }
 
 // This example shows how to use query builder in transactions.
-func Example_3() {
+func Example_transactions() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
-	tx, _ := db.Begin()
+	db.Transactional(func(tx *dbx.Tx) error {
+		_, err := tx.Insert("user", dbx.Params{
+			"name": "user1",
+		}).Execute()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Insert("user", dbx.Params{
+			"name": "user2",
+		}).Execute()
+		return err
+	})
+}
 
-	_, err1 := tx.Insert("user", dbx.Params{
-		"name": "user1",
-	}).Execute()
-	_, err2 := tx.Insert("user", dbx.Params{
-		"name": "user2",
-	}).Execute()
+type Customer struct {
+	ID   string
+	Name string
+}
 
-	if err1 == nil && err2 == nil {
-		tx.Commit()
-	} else {
-		tx.Rollback()
-	}
+// This example shows how to do CRUD operations.
+func Example_crudOperations() {
+	db, _ := dbx.Open("mysql", "user:pass@/example")
+
+	var customer Customer
+
+	// read a customer: SELECT * FROM customer WHERE id=100
+	db.Select().Model(100, &customer)
+
+	// create a customer: INSERT INTO customer (name) VALUES ('test')
+	db.Model(&customer).Insert()
+
+	// update a customer: UPDATE customer SET name='test' WHERE id=100
+	db.Model(&customer).Update()
+
+	// delete a customer: DELETE FROM customer WHERE id=100
+	db.Model(&customer).Delete()
 }
 
 func ExampleSchemaBuilder() {
