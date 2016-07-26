@@ -35,6 +35,12 @@ Run the following command to install the package:
 go get github.com/go-ozzo/ozzo-dbx
 ```
 
+You may also get specified release of the package by:
+
+```
+go get gopkg.in/go-ozzo/ozzo-dbx.v1
+```
+
 In addition, install the specific DB driver package for the kind of database to be used. Please refer to
 [SQL database drivers](https://github.com/golang/go/wiki/SQLDrivers) for a complete list. For example, if you are
 using MySQL, you may install the following package:
