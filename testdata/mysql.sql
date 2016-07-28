@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS `order_item` CASCADE;
 DROP TABLE IF EXISTS `item` CASCADE;
 DROP TABLE IF EXISTS `order` CASCADE;
 DROP TABLE IF EXISTS `customer` CASCADE;
+DROP TABLE IF EXISTS `user` CASCADE;
 
 CREATE TABLE `customer` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -18,6 +19,13 @@ CREATE TABLE `customer` (
   `name` varchar(128),
   `address` text,
   `status` int (11) DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(128) NOT NULL,
+  `created` date,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -50,6 +58,9 @@ CREATE TABLE `order_item` (
 INSERT INTO `customer` (email, name, address, status) VALUES ('user1@example.com', 'user1', 'address1', 1);
 INSERT INTO `customer` (email, name, address, status) VALUES ('user2@example.com', 'user2', NULL, 1);
 INSERT INTO `customer` (email, name, address, status) VALUES ('user3@example.com', 'user3', 'address3', 2);
+
+INSERT INTO `user` (email, created) VALUES ('user1@example.com', '2015-01-02');
+INSERT INTO `user` (email, created) VALUES ('user2@example.com', now());
 
 INSERT INTO `item` (name) VALUES ('The Go Programming Language');
 INSERT INTO `item` (name) VALUES ('Go in Action');

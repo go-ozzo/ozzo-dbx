@@ -232,6 +232,10 @@ When populating a struct, the following rules are used to determine which column
   according to the rules described above.
 * For named fields that are of struct type, they will also be expanded. But their component fields will be prefixed
   with the struct names when being populated.
+  
+An exception to the above struct expansion is that when a struct type implements `sql.Scanner` or when it is `time.Time`.
+In this case, the field will be populated as a whole by the DB driver. Also, if a field is a pointer to some type,
+the field will be allocated memory and populated with the query result if it is not null. 
 
 The following example shows how fields are populated according to the rules above:
 
@@ -240,19 +244,25 @@ type User struct {
 	id     int
 	Type   int `db:"-"`
 	MyName string `db:"name"`
-	Prof   Profile
+	Profile
+	Address Address `db:"addr"`
 }
 
 type Profile struct {
 	Age int
+}
+
+type Address struct {
+	City string
 }
 ```
 
 * `User.id`: not populated because the field is not exported;
 * `User.Type`: not populated because the `db` tag is `-`;
 * `User.MyName`: to be populated from the `name` column, according to the `db` tag;
-* `Profile.Age`: to be populated from the `prof.age` column, since `Prof` is a named field of struct type
-  and its fields will be prefixed with `prof.`.
+* `Profile.Age`: to be populated from the `age` column, since `Profile` is an anonymous field;
+* `Address.City`: to be populated from the `addr.city` column, since `Address` is a named field of struct type
+  and its fields will be prefixed with `addr.` according to the `db` tag.
 
 Note that if a column in the result does not have a corresponding struct field, it will be ignored. Similarly,
 if a struct field does not have a corresponding column in the result, it will not be populated.

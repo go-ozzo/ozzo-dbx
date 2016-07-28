@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	TestDSN     = "travis:@/ozzo_dbx_test"
+	TestDSN     = "travis:@/ozzo_dbx_test?parseTime=true"
 	FixtureFile = "testdata/mysql.sql"
 )
 

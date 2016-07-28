@@ -176,7 +176,7 @@ func (si *structInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix
 			name = ""
 		}
 
-		if ft.Kind() == reflect.Struct && !reflect.PtrTo(ft).Implements(scannerType) {
+		if isNestedStruct(ft) {
 			// dive into non-scanner struct
 			si.build(ft, path2, concat(namePrefix, name), concat(dbNamePrefix, dbName), mapper)
 		} else if dbName != "" {
@@ -200,6 +200,13 @@ func (si *structInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix
 			si.pkNames = append(si.pkNames, "Id")
 		}
 	}
+}
+
+func isNestedStruct(t reflect.Type) bool {
+	if t.PkgPath() == "time" && t.Name() == "Time" {
+		return false
+	}
+	return t.Kind() == reflect.Struct && !reflect.PtrTo(t).Implements(scannerType)
 }
 
 func parseTag(tag string) (string, bool) {

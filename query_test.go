@@ -8,6 +8,7 @@ import (
 	ss "database/sql"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -307,9 +308,23 @@ func TestReplacePlaceholders(t *testing.T) {
 }
 
 func TestIssue6(t *testing.T) {
-	db := getDB()
+	db := getPreparedDB()
 	q := db.Select("*").From("customer").Where(HashExp{"id": 1})
 	var customer Customer
 	assert.Equal(t, q.One(&customer), nil)
 	assert.Equal(t, 1, customer.ID)
+}
+
+type User struct {
+	ID      int64
+	Email   string
+	Created time.Time
+}
+
+func TestIssue13(t *testing.T) {
+	db := getPreparedDB()
+	var user User
+	err := db.Select().From("user").Where(HashExp{"id": 1}).One(&user)
+	assert.Nil(t, err)
+	assert.NotZero(t, user.Created)
 }
