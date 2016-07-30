@@ -51,7 +51,7 @@ type Customer struct {
 	Address ss.NullString
 }
 
-func (m *Customer) TableName() string {
+func (m Customer) TableName() string {
 	return "customer"
 }
 
@@ -63,7 +63,7 @@ type CustomerPtr struct {
 	Address *string
 }
 
-func (m *CustomerPtr) TableName() string {
+func (m CustomerPtr) TableName() string {
 	return "customer"
 }
 
@@ -85,7 +85,7 @@ type CustomerEmbedded struct {
 	InnerCustomer
 }
 
-func (m *CustomerEmbedded) TableName() string {
+func (m CustomerEmbedded) TableName() string {
 	return "customer"
 }
 

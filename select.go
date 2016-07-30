@@ -116,11 +116,7 @@ func (s *SelectQuery) OrWhere(e Expression) *SelectQuery {
 // Join specifies a JOIN clause.
 // The "typ" parameter specifies the JOIN type (e.g. "INNER JOIN", "LEFT JOIN").
 func (s *SelectQuery) Join(typ string, table string, on Expression) *SelectQuery {
-	if s.join == nil {
-		s.join = []JoinInfo{JoinInfo{typ, table, on}}
-	} else {
-		s.join = append(s.join, JoinInfo{typ, table, on})
-	}
+	s.join = append(s.join, JoinInfo{typ, table, on})
 	return s
 }
 

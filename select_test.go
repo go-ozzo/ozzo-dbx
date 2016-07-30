@@ -87,16 +87,16 @@ func TestSelectQuery_Model(t *testing.T) {
 
 	{
 		// One without specifying FROM
-		var customer Customer
+		var customer CustomerPtr
 		err := db.Select().OrderBy("id").One(&customer)
 		if assert.Nil(t, err) {
-			assert.Equal(t, "user1@example.com", customer.Email)
+			assert.Equal(t, "user1@example.com", *customer.Email)
 		}
 	}
 
 	{
 		// All without specifying FROM
-		var customers []Customer
+		var customers []CustomerPtr
 		err := db.Select().OrderBy("id").All(&customers)
 		if assert.Nil(t, err) {
 			assert.Equal(t, 3, len(customers))
@@ -105,16 +105,16 @@ func TestSelectQuery_Model(t *testing.T) {
 
 	{
 		// Model without specifying FROM
-		var customer Customer
+		var customer CustomerPtr
 		err := db.Select().Model(2, &customer)
 		if assert.Nil(t, err) {
-			assert.Equal(t, "user2@example.com", customer.Email)
+			assert.Equal(t, "user2@example.com", *customer.Email)
 		}
 	}
 
 	{
 		// Model with WHERE
-		var customer Customer
+		var customer CustomerPtr
 		err := db.Select().Where(HashExp{"id": 1}).Model(2, &customer)
 		assert.Equal(t, sql.ErrNoRows, err)
 

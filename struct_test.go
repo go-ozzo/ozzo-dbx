@@ -113,8 +113,11 @@ func Test_getTableName(t *testing.T) {
 	var c6 []MyCustomer
 	assert.Equal(t, "my_customer", getTableName(c6))
 
-	var c7 **int
-	assert.Equal(t, "", getTableName(c7))
+	var c7 []CustomerPtr
+	assert.Equal(t, "customer", getTableName(c7))
+
+	var c8 **int
+	assert.Equal(t, "", getTableName(c8))
 }
 
 type FA struct {

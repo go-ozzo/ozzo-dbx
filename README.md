@@ -436,8 +436,17 @@ operations without the need of writing plain SQL statements.
 To use the CRUD feature, first define a struct type for a table. By default, a struct is associated with a table
 whose name is the snake case version of the struct type name. For example, a struct named `MyCustomer`
 corresponds to the table name `my_customer`. You may explicitly specify the table name for a struct by implementing
-the `dbx.TableModel` interface. That is, define a struct method named `TableName` which should return the actual
-table name.
+the `dbx.TableModel` interface. For example,
+
+```go
+type MyCustomer struct{}
+
+func (c MyCustomer) TableName() string {
+	return "customer"
+}
+```
+
+Note that the `TableName` method should be defined with a value receiver instead of a pointer receiver. 
 
 If the struct has a field named `ID` or `Id`, by default the field will be treated as the primary key field.
 If you want to use a different field as the primary key, tag it with `db:"pk"`. You may tag multiple fields
@@ -551,6 +560,27 @@ specified by the model. If the model does not have a primary key, an error will 
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
 db.Model(&customer).Delete()
+```
+
+### Null Handling
+
+To represent a nullable database value, you can use a pointer type. If the pointer is nil, it means the corresponding 
+database value is null. 
+
+Another option to represent a database null is to use `sql.NullXyz` types. For example, if a string column is nullable,
+you may use `sql.NullString`. The `NullString.Valid` field indicates whether the value is a null or not, and 
+`NullString.String` returns the string value when it is not null. Because `sql.NulLXyz` types do not handle JSON 
+marshalling, you may use the [null package](https://github.com/guregu/null), instead. 
+
+Below is an example of handling nulls:
+
+```go
+type Customer struct {
+	ID        int
+	Email     string
+	FirstName *string        // use pointer to represent null
+	LastName  sql.NullString // use sql.NullString to represent null
+}
 ```
 
 ## Quoting Table and Column Names

@@ -244,6 +244,11 @@ func indirect(v reflect.Value) reflect.Value {
 // getTableName returns the table name corresponding to the given model struct or slice of structs.
 func getTableName(a interface{}) string {
 	if tm, ok := a.(TableModel); ok {
+		v := reflect.ValueOf(a)
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			a = reflect.New(v.Type().Elem()).Interface()
+			return a.(TableModel).TableName()
+		}
 		return tm.TableName()
 	}
 	t := reflect.TypeOf(a)
