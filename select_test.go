@@ -31,6 +31,8 @@ func TestSelectQuery(t *testing.T) {
 		AndWhere(NewExp("status=1")).
 		OrWhere(NewExp("type=2")).
 		InnerJoin("profile", NewExp("user.id=profile.id")).
+		LeftJoin("team", nil).
+		RightJoin("dept", nil).
 		OrderBy("age DESC", "type").
 		AndOrderBy("id").
 		GroupBy("id").
@@ -44,9 +46,12 @@ func TestSelectQuery(t *testing.T) {
 		AndBind(Params{"age": 30}).
 		Build()
 
-	expected = "SELECT DISTINCT CALC `id`, `name`, `age` FROM `users` INNER JOIN `profile` ON user.id=profile.id WHERE ((age>30) AND (status=1)) OR (type=2) GROUP BY `id`, `age` HAVING ((id>10) AND (id<20)) OR (type=3) ORDER BY `age` DESC, `type`, `id` LIMIT 10 OFFSET 20"
+	expected = "SELECT DISTINCT CALC `id`, `name`, `age` FROM `users` INNER JOIN `profile` ON user.id=profile.id LEFT JOIN `team` RIGHT JOIN `dept` WHERE ((age>30) AND (status=1)) OR (type=2) GROUP BY `id`, `age` HAVING ((id>10) AND (id<20)) OR (type=3) ORDER BY `age` DESC, `type`, `id` LIMIT 10 OFFSET 20"
 	assert.Equal(t, q.SQL(), expected, "t3")
 	assert.Equal(t, len(q.Params()), 2, "t4")
+
+	q3 := db.Select().AndBind(Params{"id": 1}).Build()
+	assert.Equal(t, len(q3.Params()), 1)
 
 	// union
 	q1 := db.Select().From("users").Build()
@@ -120,5 +125,25 @@ func TestSelectQuery_Model(t *testing.T) {
 
 		err = db.Select().Where(HashExp{"id": 2}).Model(2, &customer)
 		assert.Nil(t, err)
+	}
+
+	{
+		// errors
+		var i int
+		err := db.Select().Model(1, &i)
+		assert.Equal(t, VarTypeError("must be a pointer to a struct"), err)
+
+		var a struct {
+			Name string
+		}
+
+		err = db.Select().Model(1, &a)
+		assert.Equal(t, MissingPKError, err)
+		var b struct {
+			ID1 string `db:"pk"`
+			ID2 string `db:"pk"`
+		}
+		err = db.Select().Model(1, &b)
+		assert.Equal(t, CompositePKError, err)
 	}
 }

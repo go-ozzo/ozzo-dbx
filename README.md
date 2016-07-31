@@ -173,6 +173,7 @@ which will execute the query and populate the result into the specified variable
 
 * `Query.All()`: populate all rows of the result into a slice of structs or `NullString` maps.
 * `Query.One()`: populate the first row of the result into a struct or a `NullString` map.
+* `Query.Column()`: populate the first column of the result into a slice.
 * `Query.Row()`: populate the first row of the result into a list of variables, one for each returning column.
 * `Query.Rows()`: returns a `dbx.Rows` instance to allow retrieving data row by row.
 
@@ -209,6 +210,10 @@ fmt.Println(user.ID, user.Name)
 // populate the first row into a NullString map
 err = q.One(&row)
 fmt.Println(row["id"], row["name"])
+
+var ids []int
+err = q.Column(&ids)
+fmt.Println(ids)
 
 // populate the first row into id and name
 err = q.Row(&id, &name)

@@ -5,7 +5,6 @@
 package dbx
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 )
@@ -301,7 +300,7 @@ func (s *SelectQuery) Model(pk, model interface{}) error {
 	if len(si.pkNames) == 0 {
 		return MissingPKError
 	}
-	return errors.New("composite primary key is not supported")
+	return CompositePKError
 }
 
 // All executes the SELECT query and populates all rows of the result into a slice.

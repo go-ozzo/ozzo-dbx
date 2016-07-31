@@ -103,8 +103,7 @@ func (r *Rows) all(slice interface{}) error {
 		return VarTypeError("must be a slice of struct or NullStringMap")
 	}
 
-	t := v.Type()
-	et := t.Elem()
+	et := v.Type().Elem()
 
 	if et.Kind() == reflect.Map {
 		for r.Next() {
@@ -124,7 +123,7 @@ func (r *Rows) all(slice interface{}) error {
 		return VarTypeError("must be a slice of struct or NullStringMap")
 	}
 
-	si := getStructInfo(t.Elem(), r.fieldMapFunc)
+	si := getStructInfo(et, r.fieldMapFunc)
 
 	cols, _ := r.Columns()
 	for r.Next() {
@@ -141,6 +140,43 @@ func (r *Rows) all(slice interface{}) error {
 			return err
 		}
 		v.Set(reflect.Append(v, ev))
+	}
+
+	return r.Close()
+}
+
+// column populates the given slice with the first column of the query result.
+// Note that the slice must be given as a pointer.
+func (r *Rows) column(slice interface{}) error {
+	defer r.Close()
+
+	v := reflect.ValueOf(slice)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return VarTypeError("must be a pointer")
+	}
+	v = indirect(v)
+
+	if v.Kind() != reflect.Slice {
+		return VarTypeError("must be a slice of struct or NullStringMap")
+	}
+
+	et := v.Type().Elem()
+
+	cols, _ := r.Columns()
+	for r.Next() {
+		ev := reflect.New(et)
+		refs := make([]interface{}, len(cols))
+		for i := range cols {
+			if i == 0 {
+				refs[i] = ev.Interface()
+			} else {
+				refs[i] = &sql.NullString{}
+			}
+		}
+		if err := r.Scan(refs...); err != nil {
+			return err
+		}
+		v.Set(reflect.Append(v, ev.Elem()))
 	}
 
 	return r.Close()

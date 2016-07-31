@@ -17,8 +17,10 @@ type (
 	}
 )
 
-// MissingPKError represents the error that a model struct does not have a primary key declaration.
-var MissingPKError = errors.New("missing primary key declaration")
+var (
+	MissingPKError   = errors.New("missing primary key declaration")
+	CompositePKError = errors.New("composite primary key is not supported")
+)
 
 func newModelQuery(model interface{}, fieldMapFunc FieldMapFunc, builder Builder) *ModelQuery {
 	q := &ModelQuery{

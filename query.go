@@ -196,6 +196,16 @@ func (q *Query) Row(a ...interface{}) error {
 	return rows.row(a...)
 }
 
+// Column executes the SQL statement and populates the first column of the result into a slice.
+// Note that the parameter must be a pointer to a slice.
+func (q *Query) Column(a interface{}) error {
+	rows, err := q.Rows()
+	if err != nil {
+		return err
+	}
+	return rows.column(a)
+}
+
 // Rows executes the SQL statement and returns a Rows object to allow retrieving data row by row.
 func (q *Query) Rows() (rows *Rows, err error) {
 	err = q.LastError

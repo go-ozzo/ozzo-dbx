@@ -83,7 +83,7 @@ func TestModelQuery_Insert(t *testing.T) {
 	{
 		// inserting with embedded structures
 		customer := CustomerEmbedded{
-			ID:    100,
+			Id:    100,
 			Email: &email,
 			InnerCustomer: InnerCustomer{
 				Name:   &name,
@@ -92,7 +92,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		}
 		err := db.Model(&customer).Insert()
 		if assert.Nil(t, err) {
-			assert.Equal(t, 100, customer.ID)
+			assert.Equal(t, 100, customer.Id)
 			var c CustomerEmbedded
 			db.Select().From("customer").Where(HashExp{"ID": 100}).One(&c)
 			assert.Equal(t, name, *c.Name)

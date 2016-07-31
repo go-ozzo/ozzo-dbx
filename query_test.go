@@ -80,7 +80,7 @@ func (m CustomerNull) TableName() string {
 }
 
 type CustomerEmbedded struct {
-	ID    int
+	Id    int
 	Email *string
 	InnerCustomer
 }
@@ -188,7 +188,7 @@ func TestQuery_Rows(t *testing.T) {
 	sql = `SELECT * FROM customer WHERE id={:id}`
 	err = db.NewQuery(sql).Bind(Params{"id": 2}).One(&customerEmbedded)
 	if assert.Nil(t, err) {
-		assert.Equal(t, customerEmbedded.ID, 2, "customer.ID")
+		assert.Equal(t, customerEmbedded.Id, 2, "customer.ID")
 		assert.Equal(t, *customerEmbedded.Email, `user2@example.com`, "customer.Email")
 		assert.Equal(t, customerEmbedded.Status.Int64, int64(1), "customer.Status")
 	}
@@ -277,6 +277,18 @@ func TestQuery_Rows(t *testing.T) {
 	assert.NotEqual(t, err, nil, "LastError@0")
 	assert.Equal(t, customer.ID, 100, "LastError@1")
 	assert.Equal(t, q.LastError, nil, "LastError@2")
+
+	// Query.Column
+	sql = `SELECT name, id FROM customer ORDER BY id`
+	var names []string
+	err = db.NewQuery(sql).Column(&names)
+	if assert.Nil(t, err) && assert.Equal(t, 3, len(names)) {
+		assert.Equal(t, "user1", names[0])
+		assert.Equal(t, "user2", names[1])
+		assert.Equal(t, "user3", names[2])
+	}
+	err = db.NewQuery(sql).Column(names)
+	assert.NotNil(t, err)
 }
 
 func TestQuery_logSQL(t *testing.T) {
