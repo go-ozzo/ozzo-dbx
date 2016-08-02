@@ -1,6 +1,9 @@
 package dbx
 
-import "errors"
+import (
+	"errors"
+	"reflect"
+)
 
 type (
 	// TableModel is the interface that should be implemented by models which have unconventional table names.
@@ -57,7 +60,7 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 	ai := ""
 	for pkc := range pk {
 		if col, ok := cols[pkc]; ok {
-			if col == nil || col == 0 {
+			if isEmpty(reflect.ValueOf(col)) {
 				delete(cols, pkc)
 				ai = pkc
 			}
@@ -75,6 +78,10 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 		indirect(q.model.dbNameMap[ai].getField(q.model.value)).SetInt(pkValue)
 	}
 	return err
+}
+
+func isEmpty(value reflect.Value) bool {
+	return reflect.DeepEqual(value.Interface(), reflect.Zero(value.Type()).Interface())
 }
 
 // Update updates a row in the table using the struct model associated with this query.

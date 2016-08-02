@@ -331,12 +331,36 @@ type User struct {
 	ID      int64
 	Email   string
 	Created time.Time
+	Updated *time.Time
 }
 
 func TestIssue13(t *testing.T) {
 	db := getPreparedDB()
 	var user User
 	err := db.Select().From("user").Where(HashExp{"id": 1}).One(&user)
-	assert.Nil(t, err)
-	assert.NotZero(t, user.Created)
+	if assert.Nil(t, err) {
+		assert.NotZero(t, user.Created)
+		assert.Nil(t, user.Updated)
+	}
+
+	now := time.Now()
+
+	user2 := User{
+		Email:   "now@example.com",
+		Created: now,
+	}
+	err = db.Model(&user2).Insert()
+	if assert.Nil(t, err) {
+		assert.NotZero(t, user2.ID)
+	}
+
+	user3 := User{
+		Email:   "now@example.com",
+		Created: now,
+		Updated: &now,
+	}
+	err = db.Model(&user3).Insert()
+	if assert.Nil(t, err) {
+		assert.NotZero(t, user2.ID)
+	}
 }
