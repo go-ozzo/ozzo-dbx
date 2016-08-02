@@ -482,8 +482,8 @@ err := db.Model(&customer).Insert()
 ```
 
 This will insert a row using the values from *all* public fields (except the primary key field if it is empty) in the struct.
-If a primary key field is empty, it is assumed to be auto-incremental and will be automatically filled with
-the last insertion ID after a successful insertion.
+If a primary key field is zero (a integer zero or a nil pointer), it is assumed to be auto-incremental and 
+will be automatically filled with the last insertion ID after a successful insertion.
 
 You can explicitly specify the fields that should be inserted by passing the list of the field names to the `Insert()` method.
 You can also exclude certain fields from being inserted by calling `Exclude()` before calling `Insert()`. For example,

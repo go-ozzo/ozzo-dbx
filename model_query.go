@@ -56,32 +56,39 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 	}
 	tableName := q.model.tableName
 	cols := q.model.columns(attrs, q.exclude)
-	pk := q.model.pk()
-	ai := ""
-	for pkc := range pk {
-		if col, ok := cols[pkc]; ok {
-			if isEmpty(reflect.ValueOf(col)) {
-				delete(cols, pkc)
-				ai = pkc
-			}
-		} else {
-			ai = pkc
+	pkName := ""
+	for name, value := range q.model.pk() {
+		if isAutoInc(value) {
+			delete(cols, name)
+			pkName = name
+			break
 		}
 	}
 
 	result, err := q.builder.Insert(tableName, Params(cols)).Execute()
-	if err == nil && ai != "" {
+	if err == nil && pkName != "" {
 		pkValue, err := result.LastInsertId()
 		if err != nil {
 			return err
 		}
-		indirect(q.model.dbNameMap[ai].getField(q.model.value)).SetInt(pkValue)
+		indirect(q.model.dbNameMap[pkName].getField(q.model.value)).SetInt(pkValue)
 	}
 	return err
 }
 
-func isEmpty(value reflect.Value) bool {
-	return reflect.DeepEqual(value.Interface(), reflect.Zero(value.Type()).Interface())
+func isAutoInc(value interface{}) bool {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Ptr:
+		return v.IsNil() || isAutoInc(v.Elem())
+	case reflect.Invalid:
+		return true
+	}
+	return false
 }
 
 // Update updates a row in the table using the struct model associated with this query.

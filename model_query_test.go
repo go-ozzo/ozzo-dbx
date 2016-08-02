@@ -67,8 +67,8 @@ func TestModelQuery_Insert(t *testing.T) {
 		}
 		err := db.Model(&customer).Insert()
 		if assert.Nil(t, err) {
-			// potential todo:
-			// assert.Equal(t, int64(6), customerNull.ID.Int64)
+			// potential todo: need to check if the field implements sql.Scanner
+			// assert.Equal(t, int64(6), customer.ID.Int64)
 			var c CustomerNull
 			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
 			assert.Equal(t, name, c.Name)

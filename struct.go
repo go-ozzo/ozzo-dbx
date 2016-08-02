@@ -90,6 +90,7 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 	}
 }
 
+// pk returns the primary key values indexed by the corresponding primary key column names.
 func (s *structValue) pk() map[string]interface{} {
 	if len(s.pkNames) == 0 {
 		return nil
@@ -97,6 +98,7 @@ func (s *structValue) pk() map[string]interface{} {
 	return s.columns(s.pkNames, nil)
 }
 
+// columns returns the struct field values indexed by their corresponding DB column names.
 func (s *structValue) columns(include, exclude []string) map[string]interface{} {
 	v := map[string]interface{}{}
 	if len(include) == 0 {
