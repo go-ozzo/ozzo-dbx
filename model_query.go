@@ -54,7 +54,6 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 	if q.lastError != nil {
 		return q.lastError
 	}
-	tableName := q.model.tableName
 	cols := q.model.columns(attrs, q.exclude)
 	pkName := ""
 	for name, value := range q.model.pk() {
@@ -65,7 +64,7 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 		}
 	}
 
-	result, err := q.builder.Insert(tableName, Params(cols)).Execute()
+	result, err := q.builder.Insert(q.model.tableName, Params(cols)).Execute()
 	if err == nil && pkName != "" {
 		pkValue, err := result.LastInsertId()
 		if err != nil {

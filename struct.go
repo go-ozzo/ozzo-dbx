@@ -86,7 +86,7 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 	return &structValue{
 		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), mapper),
 		value:      value.Elem(),
-		tableName:  getTableName(model),
+		tableName:  GetTableName(model),
 	}
 }
 
@@ -243,8 +243,9 @@ func indirect(v reflect.Value) reflect.Value {
 	return v
 }
 
-// getTableName returns the table name corresponding to the given model struct or slice of structs.
-func getTableName(a interface{}) string {
+// GetTableName returns the table name corresponding to the given model struct or slice of structs.
+// Do not call this method in the model's TableName() method, or it will cause infinite loop.
+func GetTableName(a interface{}) string {
 	if tm, ok := a.(TableModel); ok {
 		v := reflect.ValueOf(a)
 		if v.Kind() == reflect.Ptr && v.IsNil() {
@@ -258,7 +259,7 @@ func getTableName(a interface{}) string {
 		t = t.Elem()
 	}
 	if t.Kind() == reflect.Slice {
-		return getTableName(reflect.Zero(t.Elem()).Interface())
+		return GetTableName(reflect.Zero(t.Elem()).Interface())
 	}
 	return DefaultFieldMapFunc(t.Name())
 }

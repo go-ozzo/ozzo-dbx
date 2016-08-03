@@ -271,7 +271,7 @@ func (s *SelectQuery) Build() *Query {
 // Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (s *SelectQuery) One(a interface{}) error {
 	if len(s.from) == 0 {
-		if tableName := getTableName(a); tableName != "" {
+		if tableName := GetTableName(a); tableName != "" {
 			s.from = []string{tableName}
 		}
 	}
@@ -312,7 +312,7 @@ func (s *SelectQuery) Model(pk, model interface{}) error {
 // or the TableName() method if the slice element implements the TableModel interface.
 func (s *SelectQuery) All(slice interface{}) error {
 	if len(s.from) == 0 {
-		if tableName := getTableName(slice); tableName != "" {
+		if tableName := GetTableName(slice); tableName != "" {
 			s.from = []string{tableName}
 		}
 	}

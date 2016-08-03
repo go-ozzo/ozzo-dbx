@@ -96,28 +96,28 @@ type MyCustomer struct{}
 
 func Test_getTableName(t *testing.T) {
 	var c1 Customer
-	assert.Equal(t, "customer", getTableName(c1))
+	assert.Equal(t, "customer", GetTableName(c1))
 
 	var c2 *Customer
-	assert.Equal(t, "customer", getTableName(c2))
+	assert.Equal(t, "customer", GetTableName(c2))
 
 	var c3 MyCustomer
-	assert.Equal(t, "my_customer", getTableName(c3))
+	assert.Equal(t, "my_customer", GetTableName(c3))
 
 	var c4 []Customer
-	assert.Equal(t, "customer", getTableName(c4))
+	assert.Equal(t, "customer", GetTableName(c4))
 
 	var c5 *[]Customer
-	assert.Equal(t, "customer", getTableName(c5))
+	assert.Equal(t, "customer", GetTableName(c5))
 
 	var c6 []MyCustomer
-	assert.Equal(t, "my_customer", getTableName(c6))
+	assert.Equal(t, "my_customer", GetTableName(c6))
 
 	var c7 []CustomerPtr
-	assert.Equal(t, "customer", getTableName(c7))
+	assert.Equal(t, "customer", GetTableName(c7))
 
 	var c8 **int
-	assert.Equal(t, "", getTableName(c8))
+	assert.Equal(t, "", GetTableName(c8))
 }
 
 type FA struct {
