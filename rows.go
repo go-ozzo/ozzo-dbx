@@ -152,12 +152,12 @@ func (r *Rows) column(slice interface{}) error {
 
 	v := reflect.ValueOf(slice)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return VarTypeError("must be a pointer")
+		return VarTypeError("must be a pointer to a slice")
 	}
 	v = indirect(v)
 
 	if v.Kind() != reflect.Slice {
-		return VarTypeError("must be a slice of struct or NullStringMap")
+		return VarTypeError("must be a pointer to a slice")
 	}
 
 	et := v.Type().Elem()

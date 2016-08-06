@@ -84,6 +84,18 @@ func TestSelectQuery_Data(t *testing.T) {
 	q.Row(&id, &email)
 	assert.Equal(t, id, "1", "id")
 	assert.Equal(t, email, "user1@example.com", "email")
+
+	var emails []string
+	err := db.Select("email").From("customer").Column(&emails)
+	if assert.Nil(t, err) {
+		assert.Equal(t, 3, len(emails))
+	}
+
+	var e int
+	err = db.Select().From("customer").One(&e)
+	assert.NotNil(t, err)
+	err = db.Select().From("customer").All(&e)
+	assert.NotNil(t, err)
 }
 
 func TestSelectQuery_Model(t *testing.T) {

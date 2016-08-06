@@ -81,6 +81,8 @@ func (b *MysqlBuilder) Upsert(table string, cols Params, constraints ...string) 
 	return q
 }
 
+var mysqlColumnRegexp = regexp.MustCompile("(?m)^\\s*`(.*?)`\\s+(.*?),?$")
+
 // RenameColumn creates a Query that can be used to rename a column in a table.
 func (b *MysqlBuilder) RenameColumn(table, oldName, newName string) *Query {
 	qt := b.db.QuoteTableName(table)
@@ -93,8 +95,7 @@ func (b *MysqlBuilder) RenameColumn(table, oldName, newName string) *Query {
 		return b.db.NewQuery(sql)
 	}
 
-	regex := regexp.MustCompile("(?m)^\\s*`(.*?)`\\s+(.*?),?$")
-	if matches := regex.FindAllStringSubmatch(info.SQL, -1); matches != nil {
+	if matches := mysqlColumnRegexp.FindAllStringSubmatch(info.SQL, -1); matches != nil {
 		for _, match := range matches {
 			if match[1] == oldName {
 				sql += " " + match[2]

@@ -330,3 +330,10 @@ func (s *SelectQuery) Rows() (*Rows, error) {
 func (s *SelectQuery) Row(a ...interface{}) error {
 	return s.Build().Row(a...)
 }
+
+// Column builds and executes the SELECT statement and populates the first column of the result into a slice.
+// Note that the parameter must be a pointer to a slice.
+// This is a shortcut to SelectQuery.Build().Column()
+func (s *SelectQuery) Column(a interface{}) error {
+	return s.Build().Column(a)
+}

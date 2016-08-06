@@ -24,11 +24,13 @@ func TestQB_BuildSelect(t *testing.T) {
 		{"aliased columns", []string{"name As Name", "users.last_name", "u.first1 first"}, false, "", "SELECT `name` AS `Name`, `users`.`last_name`, `u`.`first1` AS `first`"},
 	}
 
-	qb := getDB().QueryBuilder()
+	db := getDB()
+	qb := db.QueryBuilder()
 	for _, test := range tests {
 		s := qb.BuildSelect(test.cols, test.distinct, test.option)
 		assert.Equal(t, test.expected, s, test.tag)
 	}
+	assert.Equal(t, qb.(*BaseQueryBuilder).DB(), db)
 }
 
 func TestQB_BuildFrom(t *testing.T) {
