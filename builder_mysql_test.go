@@ -28,6 +28,7 @@ func TestMysqlBuilder_QuoteSimpleColumnName(t *testing.T) {
 }
 
 func TestMysqlBuilder_Upsert(t *testing.T) {
+	getPreparedDB()
 	b := getMysqlBuilder()
 	q := b.Upsert("users", Params{
 		"name": "James",
