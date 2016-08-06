@@ -92,8 +92,12 @@ func (b *MysqlBuilder) RenameColumn(table, oldName, newName string) *Query {
 		SQL string `db:"Create Table"`
 	}
 	if err := b.db.NewQuery("SHOW CREATE TABLE " + qt).One(&info); err != nil {
+		fmt.Println(err)
+		fmt.Println(info.SQL)
 		return b.db.NewQuery(sql)
 	}
+
+	fmt.Println(info.SQL)
 
 	if matches := mysqlColumnRegexp.FindAllStringSubmatch(info.SQL, -1); matches != nil {
 		for _, match := range matches {
