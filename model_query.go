@@ -2,6 +2,7 @@ package dbx
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -13,6 +14,7 @@ type (
 
 	// ModelQuery represents a query associated with a struct model.
 	ModelQuery struct {
+		db        *DB
 		builder   Builder
 		model     *structValue
 		exclude   []string
@@ -25,8 +27,9 @@ var (
 	CompositePKError = errors.New("composite primary key is not supported")
 )
 
-func newModelQuery(model interface{}, fieldMapFunc FieldMapFunc, builder Builder) *ModelQuery {
+func newModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
 	q := &ModelQuery{
+		db:      db,
 		builder: builder,
 		model:   newStructValue(model, fieldMapFunc),
 	}
@@ -64,15 +67,37 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 		}
 	}
 
-	result, err := q.builder.Insert(q.model.tableName, Params(cols)).Execute()
-	if err == nil && pkName != "" {
-		pkValue, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		indirect(q.model.dbNameMap[pkName].getField(q.model.value)).SetInt(pkValue)
+	if pkName == "" {
+		_, err := q.builder.Insert(q.model.tableName, Params(cols)).Execute()
+		return err
 	}
-	return err
+
+	// handle auto-incremental PK
+	query := q.builder.Insert(q.model.tableName, Params(cols))
+	pkValue, err := insertAndReturnPK(q.db, query, pkName)
+	if err != nil {
+		return err
+	}
+	indirect(q.model.dbNameMap[pkName].getField(q.model.value)).SetInt(pkValue)
+	return nil
+}
+
+func insertAndReturnPK(db *DB, query *Query, pkName string) (int64, error) {
+	if db.DriverName() != "postgres" {
+		result, err := query.Execute()
+		if err != nil {
+			return 0, err
+		}
+		return result.LastInsertId()
+	}
+
+	// specially handle postgres (lib/pq) as it doesn't support LastInsertId
+	returning := fmt.Sprintf(" RETURNING %s", db.QuoteColumnName(pkName))
+	query.sql += returning
+	query.rawSQL += returning
+	var pkValue int64
+	err := query.Row(&pkValue)
+	return pkValue, err
 }
 
 func isAutoInc(value interface{}) bool {
