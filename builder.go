@@ -177,15 +177,15 @@ func (b *BaseBuilder) QuoteSimpleColumnName(s string) string {
 // The keys of cols are the column names, while the values of cols are the corresponding column
 // values to be inserted.
 func (b *BaseBuilder) Insert(table string, cols Params) *Query {
-	names := []string{}
+	names := make([]string, 0, len(cols))
 	for name := range cols {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	params := Params{}
-	columns := []string{}
-	values := []string{}
+	columns := make([]string, 0, len(names))
+	values := make([]string, 0, len(names))
 	for _, name := range names {
 		columns = append(columns, b.db.QuoteColumnName(name))
 		value := cols[name]
@@ -227,14 +227,14 @@ func (b *BaseBuilder) Upsert(table string, cols Params, constraints ...string) *
 // values. If the "where" expression is nil, the UPDATE SQL statement will have no WHERE clause
 // (be careful in this case as the SQL statement will update ALL rows in the table).
 func (b *BaseBuilder) Update(table string, cols Params, where Expression) *Query {
-	names := []string{}
+	names := make([]string, 0, len(cols))
 	for name := range cols {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	params := Params{}
-	lines := []string{}
+	lines := make([]string, 0, len(names))
 	for _, name := range names {
 		value := cols[name]
 		name = b.db.QuoteColumnName(name)

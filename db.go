@@ -168,7 +168,6 @@ var (
 // It also quotes table names and column names found in the SQL if these names are enclosed
 // within double square/curly brackets. The method will return the updated SQL and the list of parameter names.
 func (db *DB) processSQL(s string) (string, []string) {
-	//	placeholders := make([]string, 0)
 	var placeholders []string
 	count := 0
 	s = plRegex.ReplaceAllStringFunc(s, func(m string) string {
