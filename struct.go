@@ -100,7 +100,7 @@ func (s *structValue) pk() map[string]interface{} {
 
 // columns returns the struct field values indexed by their corresponding DB column names.
 func (s *structValue) columns(include, exclude []string) map[string]interface{} {
-	v := map[string]interface{}{}
+	v := make(map[string]interface{}, len(s.nameMap))
 	if len(include) == 0 {
 		for _, fi := range s.nameMap {
 			v[fi.dbName] = fi.getValue(s.value)
