@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
@@ -52,32 +53,35 @@ var selectRegex = regexp.MustCompile(`(?i:\s+as\s+|\s+)([\w\-_\.]+)$`)
 
 // BuildSelect generates a SELECT clause from the given selected column names.
 func (q *BaseQueryBuilder) BuildSelect(cols []string, distinct bool, option string) string {
-	s := ""
+	var s bytes.Buffer
+	s.WriteString("SELECT ")
+	if distinct {
+		s.WriteString("DISTINCT ")
+	}
+	if option != "" {
+		s.WriteString(option)
+		s.WriteString(" ")
+	}
+	if len(cols) == 0 {
+		s.WriteString("*")
+		return s.String()
+	}
+
 	for i, col := range cols {
 		if i > 0 {
-			s += ", "
+			s.WriteString(", ")
 		}
 		matches := selectRegex.FindStringSubmatch(col)
 		if len(matches) == 0 {
-			s += q.db.QuoteColumnName(col)
+			s.WriteString(q.db.QuoteColumnName(col))
 		} else {
 			col := col[:len(col)-len(matches[0])]
 			alias := matches[1]
-			s += q.db.QuoteColumnName(col) + " AS " + q.db.QuoteSimpleColumnName(alias)
+			s.WriteString(q.db.QuoteColumnName(col) + " AS " + q.db.QuoteSimpleColumnName(alias))
 		}
 	}
-	if s == "" {
-		s = "*"
-	}
 
-	sel := "SELECT"
-	if distinct {
-		sel += " DISTINCT"
-	}
-	if option != "" {
-		sel += " " + option
-	}
-	return sel + " " + s
+	return s.String()
 }
 
 // BuildFrom generates a FROM clause from the given tables.
