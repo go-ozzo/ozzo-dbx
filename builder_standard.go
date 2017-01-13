@@ -24,3 +24,9 @@ func NewStandardBuilder(db *DB, executor Executor) Builder {
 func (b *StandardBuilder) QueryBuilder() QueryBuilder {
 	return b.qb
 }
+
+// Model returns a new ModelQuery object that can be used to perform model-based DB operations.
+// The model passed to this method should be a pointer to a model struct.
+func (b *StandardBuilder) Model(model interface{}) *ModelQuery {
+	return NewModelQuery(model, b.db.FieldMapper, b.db, b)
+}

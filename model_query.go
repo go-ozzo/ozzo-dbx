@@ -27,7 +27,7 @@ var (
 	CompositePKError = errors.New("composite primary key is not supported")
 )
 
-func newModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
+func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
 	q := &ModelQuery{
 		db:      db,
 		builder: builder,

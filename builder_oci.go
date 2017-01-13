@@ -29,6 +29,12 @@ func NewOciBuilder(db *DB, executor Executor) Builder {
 	}
 }
 
+// Model returns a new ModelQuery object that can be used to perform model-based DB operations.
+// The model passed to this method should be a pointer to a model struct.
+func (b *OciBuilder) Model(model interface{}) *ModelQuery {
+	return NewModelQuery(model, b.db.FieldMapper, b.db, b)
+}
+
 // GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.
 func (b *OciBuilder) GeneratePlaceholder(i int) string {
 	return fmt.Sprintf(":p%v", i)

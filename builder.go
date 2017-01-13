@@ -139,12 +139,6 @@ func (b *BaseBuilder) Select(cols ...string) *SelectQuery {
 	return NewSelectQuery(b.db.Builder).Select(cols...)
 }
 
-// Model returns a new ModelQuery object that can be used to perform model-based DB operations.
-// The model passed to this method should be a pointer to a model struct.
-func (b *BaseBuilder) Model(model interface{}) *ModelQuery {
-	return newModelQuery(model, b.db.FieldMapper, b.db, b.db.Builder)
-}
-
 // GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.
 func (b *BaseBuilder) GeneratePlaceholder(int) string {
 	return "?"

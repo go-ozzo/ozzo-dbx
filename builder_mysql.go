@@ -32,6 +32,12 @@ func (b *MysqlBuilder) QueryBuilder() QueryBuilder {
 	return b.qb
 }
 
+// Model returns a new ModelQuery object that can be used to perform model-based DB operations.
+// The model passed to this method should be a pointer to a model struct.
+func (b *MysqlBuilder) Model(model interface{}) *ModelQuery {
+	return NewModelQuery(model, b.db.FieldMapper, b.db, b)
+}
+
 // QuoteSimpleTableName quotes a simple table name.
 // A simple table name does not contain any schema prefix.
 func (b *MysqlBuilder) QuoteSimpleTableName(s string) string {
