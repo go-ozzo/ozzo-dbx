@@ -29,6 +29,13 @@ func NewOciBuilder(db *DB, executor Executor) Builder {
 	}
 }
 
+// Select returns a new SelectQuery object that can be used to build a SELECT statement.
+// The parameters to this method should be the list column names to be selected.
+// A column name may have an optional alias name. For example, Select("id", "my_name AS name").
+func (b *OciBuilder) Select(cols ...string) *SelectQuery {
+	return NewSelectQuery(b).Select(cols...)
+}
+
 // Model returns a new ModelQuery object that can be used to perform model-based DB operations.
 // The model passed to this method should be a pointer to a model struct.
 func (b *OciBuilder) Model(model interface{}) *ModelQuery {

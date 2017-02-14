@@ -132,13 +132,6 @@ func (b *BaseBuilder) NewQuery(sql string) *Query {
 	return NewQuery(b.db, b.executor, sql)
 }
 
-// Select returns a new SelectQuery object that can be used to build a SELECT statement.
-// The parameters to this method should be the list column names to be selected.
-// A column name may have an optional alias name. For example, Select("id", "my_name AS name").
-func (b *BaseBuilder) Select(cols ...string) *SelectQuery {
-	return NewSelectQuery(b.db.Builder).Select(cols...)
-}
-
 // GeneratePlaceholder generates an anonymous parameter placeholder with the given parameter ID.
 func (b *BaseBuilder) GeneratePlaceholder(int) string {
 	return "?"
