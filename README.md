@@ -25,7 +25,7 @@ as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It h
 
 ## Requirements
 
-Go 1.2 or above.
+Go 1.5 or above.
 
 ## Installation
 
