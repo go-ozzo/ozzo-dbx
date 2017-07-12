@@ -92,6 +92,30 @@ func Test_structValue_columns(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{"Name": "abc"}, cols)
 }
 
+func TestIssue37(t *testing.T) {
+	customer := Customer{
+		ID:     1,
+		Name:   "abc",
+		Status: 2,
+		Email:  "abc@example.com",
+	}
+	ev := struct{
+		Customer
+		Status string
+	} {customer, "20"}
+	sv := newStructValue(&ev, nil)
+	cols := sv.columns([]string{"ID", "Status"}, nil)
+	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
+
+	ev2 := struct{
+		Status string
+		Customer
+	} {"20", customer}
+	sv = newStructValue(&ev2, nil)
+	cols = sv.columns([]string{"ID", "Status"}, nil)
+	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
+}
+
 type MyCustomer struct{}
 
 func Test_getTableName(t *testing.T) {

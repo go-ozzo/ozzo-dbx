@@ -188,10 +188,13 @@ func (si *structInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix
 				dbName: concat(dbNamePrefix, dbName),
 				path:   path2,
 			}
-			si.nameMap[fi.name] = fi
-			si.dbNameMap[fi.dbName] = fi
-			if isPK {
-				si.pkNames = append(si.pkNames, fi.name)
+			// a field in an anonymous struct may be shadowed
+			if _, ok := si.nameMap[fi.name]; !ok || len(path2) < len(si.nameMap[fi.name].path) {
+				si.nameMap[fi.name] = fi
+				si.dbNameMap[fi.dbName] = fi
+				if isPK {
+					si.pkNames = append(si.pkNames, fi.name)
+				}
 			}
 		}
 	}
