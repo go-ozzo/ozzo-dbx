@@ -36,7 +36,7 @@ func (b *MysqlBuilder) QueryBuilder() QueryBuilder {
 // The parameters to this method should be the list column names to be selected.
 // A column name may have an optional alias name. For example, Select("id", "my_name AS name").
 func (b *MysqlBuilder) Select(cols ...string) *SelectQuery {
-	return NewSelectQuery(b.db).Select(cols...)
+	return NewSelectQuery(b, b.db).Select(cols...)
 }
 
 // Model returns a new ModelQuery object that can be used to perform model-based DB operations.

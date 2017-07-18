@@ -46,9 +46,9 @@ type UnionInfo struct {
 }
 
 // NewSelectQuery creates a new SelectQuery instance.
-func NewSelectQuery(db *DB) *SelectQuery {
+func NewSelectQuery(builder Builder, db *DB) *SelectQuery {
 	return &SelectQuery{
-		builder:     db.Builder,
+		builder:     builder,
 		selects:     []string{},
 		from:        []string{},
 		join:        []JoinInfo{},
