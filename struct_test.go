@@ -65,6 +65,13 @@ func Test_indirect(t *testing.T) {
 	if assert.NotNil(t, b) {
 		assert.Equal(t, 0, *b)
 	}
+
+	var c1 Customer = Customer{}
+
+	vc := indirect(reflect.ValueOf(&c1))
+	assert.Equal(t, reflect.Struct, vc.Kind())
+	assert.Equal(t, reflect.Struct, vc.Type().Kind())
+	assert.True(t, vc.CanSet())
 }
 
 func Test_structValue_columns(t *testing.T) {
@@ -99,18 +106,18 @@ func TestIssue37(t *testing.T) {
 		Status: 2,
 		Email:  "abc@example.com",
 	}
-	ev := struct{
+	ev := struct {
 		Customer
 		Status string
-	} {customer, "20"}
+	}{customer, "20"}
 	sv := newStructValue(&ev, nil)
 	cols := sv.columns([]string{"ID", "Status"}, nil)
 	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
 
-	ev2 := struct{
+	ev2 := struct {
 		Status string
 		Customer
-	} {"20", customer}
+	}{"20", customer}
 	sv = newStructValue(&ev2, nil)
 	cols = sv.columns([]string{"ID", "Status"}, nil)
 	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
@@ -118,30 +125,88 @@ func TestIssue37(t *testing.T) {
 
 type MyCustomer struct{}
 
+type SomeTable struct{}
+
+func (*SomeTable) TableName() string {
+	return "strange_name"
+}
+
 func Test_getTableName(t *testing.T) {
-	var c1 Customer
-	assert.Equal(t, "customer", GetTableName(c1))
+	{
+		var c Customer
+		assert.Equal(t, "customer", GetTableName(c))
+	}
 
-	var c2 *Customer
-	assert.Equal(t, "customer", GetTableName(c2))
+	{
+		var c *Customer
+		assert.Equal(t, "customer", GetTableName(c))
+	}
 
-	var c3 MyCustomer
-	assert.Equal(t, "my_customer", GetTableName(c3))
+	{
+		var c MyCustomer
+		assert.Equal(t, "my_customer", GetTableName(c))
+	}
 
-	var c4 []Customer
-	assert.Equal(t, "customer", GetTableName(c4))
+	{
+		var c []Customer
+		assert.Equal(t, "customer", GetTableName(c))
+	}
 
-	var c5 *[]Customer
-	assert.Equal(t, "customer", GetTableName(c5))
+	{
+		var c *[]Customer
+		assert.Equal(t, "customer", GetTableName(c))
+	}
 
-	var c6 []MyCustomer
-	assert.Equal(t, "my_customer", GetTableName(c6))
+	{
+		var c []*Customer
+		assert.Equal(t, "customer", GetTableName(c))
+	}
 
-	var c7 []CustomerPtr
-	assert.Equal(t, "customer", GetTableName(c7))
+	{
+		var c []MyCustomer
+		assert.Equal(t, "my_customer", GetTableName(c))
+	}
 
-	var c8 **int
-	assert.Equal(t, "", GetTableName(c8))
+	{
+		var c []CustomerPtr
+		assert.Equal(t, "customer", GetTableName(c))
+	}
+
+	{
+		var c **int
+		assert.Equal(t, "", GetTableName(c))
+	}
+
+	{
+		var c ***[]Customer
+		assert.Equal(t, "customer", GetTableName(c))
+	}
+
+	{
+		func(i interface{}) {
+			func(c interface{}) {
+				assert.Equal(t, "customer", GetTableName(c))
+			}(&i)
+		}(&Customer{})
+	}
+
+	{
+		func(i interface{}) {
+			func(c interface{}) {
+				assert.Equal(t, "customer", GetTableName(&c))
+			}(&i)
+		}(&Customer{})
+	}
+
+	{
+		var c *SomeTable
+		assert.Equal(t, "strange_name", GetTableName(c))
+	}
+
+	{
+		var c **SomeTable
+		assert.Equal(t, "strange_name", GetTableName(c))
+	}
 }
 
 type FA struct {
