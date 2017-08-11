@@ -78,14 +78,14 @@ func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 }
 
 func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
-	value := reflect.ValueOf(model)
-	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() {
+	value := indirect0(reflect.ValueOf(model), nil, false, true)
+	if value.Kind() != reflect.Struct {
 		return nil
 	}
 
 	return &structValue{
-		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), mapper),
-		value:      value.Elem(),
+		structInfo: getStructInfo(value.Type(), mapper),
+		value:      value,
 		tableName:  GetTableName(model),
 	}
 }
@@ -237,13 +237,7 @@ func concat(s1, s2 string) string {
 // indirect dereferences pointers and returns the actual value it points to.
 // If a pointer is nil, it will be initialized with a new value.
 func indirect(v reflect.Value) reflect.Value {
-	for v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			v.Set(reflect.New(v.Type().Elem()))
-		}
-		v = v.Elem()
-	}
-	return v
+	return indirect0(v, nil, false, true)
 }
 
 // GetTableName returns the table name corresponding to the given model struct or slice of structs.
@@ -257,12 +251,85 @@ func GetTableName(a interface{}) string {
 		}
 		return tm.TableName()
 	}
-	t := reflect.TypeOf(a)
-	if t.Kind() == reflect.Ptr {
+
+	tmt := reflect.TypeOf((*TableModel)(nil)).Elem()
+	v := indirect0(reflect.ValueOf(a), func(v reflect.Value) bool {
+		// stop once we found something that implements TableModel
+		return v.Type().Implements(tmt)
+
+	}, false, false)
+	// may well be our early exit got us here
+	t := v.Type()
+	for t.Kind() == reflect.Ptr && !t.Implements(tmt) {
 		t = t.Elem()
 	}
+	if t.Implements(tmt) {
+		return GetTableName(reflect.New(t).Elem().Interface())
+	}
+	// a slice may have elements of the type we're searching for
 	if t.Kind() == reflect.Slice {
-		return GetTableName(reflect.Zero(t.Elem()).Interface())
+		return GetTableName(reflect.New(t.Elem()).Elem().Interface())
+	}
+	// or a struct where we derive the name from
+	if t.Kind() != reflect.Struct {
+		// otherwise we can't do anything with that value
+		return ""
 	}
 	return DefaultFieldMapFunc(t.Name())
+}
+
+// resolves the given value through pointers and interfaces, returning the actual value found.
+// When init == true it initializes empty pointers on the way down. Once the match function returns
+// true when called with the current value and type handled, the process is stopped early.
+func indirect0(v reflect.Value, match func(v reflect.Value) bool, lastMatching, init bool) reflect.Value {
+	// need to use Value.Elem() to get through interfaces
+	found := v
+	aborted := false
+FOR:
+	for v.IsValid() {
+		// continue?
+		if match != nil && match(v) {
+			found = v
+			aborted = true
+			if !lastMatching {
+				break FOR
+			}
+		}
+		// inspect type
+		k := v.Kind()
+		switch {
+		case k == reflect.Ptr:
+			if v.IsNil() {
+				if init && v.CanSet() {
+					v.Set(reflect.New(v.Type().Elem()))
+				} else {
+					v = reflect.New(v.Type().Elem())
+				}
+			}
+			v = v.Elem()
+		case k == reflect.Interface:
+			if v.IsNil() {
+				break FOR
+			}
+			v = v.Elem()
+		case k == reflect.Slice:
+			if v.IsNil() {
+				if init && v.CanSet() {
+					v.Set(reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), 0, 0))
+				} else {
+					v = reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), 0, 0)
+				}
+			}
+			break FOR
+		default:
+			break FOR
+		}
+	}
+
+	// done
+	if aborted {
+		return found
+	} else {
+		return v
+	}
 }

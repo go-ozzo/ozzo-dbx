@@ -286,10 +286,8 @@ func (s *SelectQuery) One(a interface{}) error {
 // to infer the name of the primary key column. Only simple primary key is supported. For composite primary keys,
 // please use Where() to specify the filtering condition.
 func (s *SelectQuery) Model(pk, model interface{}) error {
-	t := reflect.TypeOf(model)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
+	v := indirect(reflect.ValueOf(model))
+	t := v.Type()
 	if t.Kind() != reflect.Struct {
 		return VarTypeError("must be a pointer to a struct")
 	}

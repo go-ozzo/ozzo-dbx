@@ -6,6 +6,7 @@ package dbx
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 )
 
@@ -63,13 +64,15 @@ func (r *Rows) ScanMap(a NullStringMap) error {
 // To change the default behavior, set DB.FieldMapper with your custom mapping function.
 // You may also set Query.FieldMapper to change the behavior for particular queries.
 func (r *Rows) ScanStruct(a interface{}) error {
-	rv := reflect.ValueOf(a)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return VarTypeError("must be a pointer")
-	}
-	rv = indirect(rv)
+	return r.scanStructV(reflect.ValueOf(a))
+}
+func (r *Rows) scanStructV(rv reflect.Value) error {
+	rv = indirect0(rv, nil, true, true)
 	if rv.Kind() != reflect.Struct {
 		return VarTypeError("must be a pointer to a struct")
+	}
+	if !rv.CanSet() {
+		return VarTypeError("not settable value")
 	}
 
 	si := getStructInfo(rv.Type(), r.fieldMapFunc)
@@ -93,56 +96,62 @@ func (r *Rows) ScanStruct(a interface{}) error {
 func (r *Rows) all(slice interface{}) error {
 	defer r.Close()
 
-	v := reflect.ValueOf(slice)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return VarTypeError("must be a pointer")
-	}
-	v = indirect(v)
+	v := indirect(reflect.ValueOf(slice))
 
 	if v.Kind() != reflect.Slice {
-		return VarTypeError("must be a slice of struct or NullStringMap")
+		return VarTypeError("not a slice, must be a slice of struct or NullStringMap")
+	}
+	if !v.CanSet() {
+		return VarTypeError("slice not settable")
 	}
 
+	// check for a valid element type
 	et := v.Type().Elem()
-
-	if et.Kind() == reflect.Map {
-		for r.Next() {
-			ev, ok := reflect.MakeMap(et).Interface().(NullStringMap)
-			if !ok {
-				return VarTypeError("must be a slice of struct or NullStringMap")
-			}
-			if err := r.ScanMap(ev); err != nil {
-				return err
-			}
-			v.Set(reflect.Append(v, reflect.ValueOf(ev)))
-		}
-		return r.Close()
+	var si *structInfo
+	finV := indirect0(reflect.New(et), nil, false, false)
+	switch finV.Kind() {
+	default:
+		return VarTypeError(fmt.Sprintf("a slice of %s, must be a slice of struct or NullStringMap", finV.Kind()))
+	case reflect.Map:
+	case reflect.Struct:
+		si = getStructInfo(finV.Type(), r.fieldMapFunc)
+	}
+	cols, err := r.Columns()
+	if err != nil {
+		return err
 	}
 
-	if et.Kind() != reflect.Struct {
-		return VarTypeError("must be a slice of struct or NullStringMap")
-	}
-
-	si := getStructInfo(et, r.fieldMapFunc)
-
-	cols, _ := r.Columns()
+	// everything prepared, now scan the result
 	for r.Next() {
-		ev := reflect.New(et).Elem()
+		ev, err := r.scanRow(et, si, cols)
+		if err != nil {
+			return err
+		}
+		newSliceV := reflect.Append(v, ev)
+		v.Set(newSliceV)
+	}
+	return nil
+}
+func (r *Rows) scanRow(et reflect.Type, si *structInfo, cols []string) (ev reflect.Value, err error) {
+	ev = reflect.New(et).Elem()
+	evi := indirect(ev)
+	if evi.Kind() == reflect.Map {
+		if evi.IsNil() {
+			evi.Set(reflect.MakeMap(evi.Type()))
+		}
+		err = r.ScanMap(evi.Interface().(NullStringMap))
+	} else {
 		refs := make([]interface{}, len(cols))
 		for i, col := range cols {
 			if fi, ok := si.dbNameMap[col]; ok {
-				refs[i] = fi.getField(ev).Addr().Interface()
+				refs[i] = fi.getField(evi).Addr().Interface()
 			} else {
 				refs[i] = &sql.NullString{}
 			}
 		}
-		if err := r.Scan(refs...); err != nil {
-			return err
-		}
-		v.Set(reflect.Append(v, ev))
+		err = r.Scan(refs...)
 	}
-
-	return r.Close()
+	return
 }
 
 // column populates the given slice with the first column of the query result.
@@ -150,14 +159,13 @@ func (r *Rows) all(slice interface{}) error {
 func (r *Rows) column(slice interface{}) error {
 	defer r.Close()
 
-	v := reflect.ValueOf(slice)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return VarTypeError("must be a pointer to a slice")
+	v := indirect(reflect.ValueOf(slice))
+	if !v.CanSet() {
+		return VarTypeError("not settable value")
 	}
-	v = indirect(v)
 
 	if v.Kind() != reflect.Slice {
-		return VarTypeError("must be a pointer to a slice")
+		return VarTypeError("must be a (pointer to a) slice")
 	}
 
 	et := v.Type().Elem()
@@ -194,37 +202,23 @@ func (r *Rows) one(a interface{}) error {
 		return sql.ErrNoRows
 	}
 
-	var err error
+	rv := indirect(reflect.ValueOf(a))
 
-	rt := reflect.TypeOf(a)
-	if rt.Kind() == reflect.Ptr && rt.Elem().Kind() == reflect.Map {
-		// pointer to map
-		v := indirect(reflect.ValueOf(a))
-		if v.IsNil() {
-			v.Set(reflect.MakeMap(v.Type()))
+	if rv.Kind() == reflect.Map {
+		if rv.IsNil() {
+			if !rv.CanSet() {
+				return VarTypeError("not settable value")
+			}
+			rv.Set(reflect.MakeMap(rv.Type()))
 		}
-		a = v.Interface()
-		rt = reflect.TypeOf(a)
-	}
-
-	if rt.Kind() == reflect.Map {
-		v, ok := a.(NullStringMap)
+		v, ok := rv.Interface().(NullStringMap)
 		if !ok {
 			return VarTypeError("must be a NullStringMap")
 		}
-		if v == nil {
-			return VarTypeError("NullStringMap is nil")
-		}
-		err = r.ScanMap(v)
+		return r.ScanMap(v)
 	} else {
-		err = r.ScanStruct(a)
+		return r.scanStructV(rv)
 	}
-
-	if err != nil {
-		return err
-	}
-
-	return r.Close()
 }
 
 // row populates a single row of query result into a list of variables.
