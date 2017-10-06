@@ -6,6 +6,7 @@ package dbx
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"strings"
@@ -71,11 +72,14 @@ func (q *Query) SQL() string {
 func (q *Query) logSQL() string {
 	s := q.sql
 	for k, v := range q.params {
+		if valuer, ok := v.(driver.Valuer); ok && valuer != nil {
+			v, _ = valuer.Value()
+		}
 		var sv string
-		if _, ok := v.(string); ok {
-			sv = "'" + strings.Replace(v.(string), "'", "''", -1) + "'"
-		} else if _, ok := v.([]byte); ok {
-			sv = "'" + strings.Replace(string(v.([]byte)), "'", "''", -1) + "'"
+		if str, ok := v.(string); ok {
+			sv = "'" + strings.Replace(str, "'", "''", -1) + "'"
+		} else if bs, ok := v.([]byte); ok {
+			sv = "'" + strings.Replace(string(bs), "'", "''", -1) + "'"
 		} else {
 			sv = fmt.Sprintf("%v", v)
 		}
