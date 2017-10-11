@@ -19,6 +19,13 @@ type (
 	// are provided, they will be passed to fmt.Sprintf() to generate the log message.
 	LogFunc func(format string, a ...interface{})
 
+	// PerfFunc is called when a query finishes execution.
+	// The query execution time is passed to this function so that the DB performance
+	// can be profiled. The "ns" parameter gives the number of nanoseconds that the
+	// SQL statement takes to execute, while the "execute" parameter indicates whether
+	// the SQL statement is executed or queried (usually SELECT statements).
+	PerfFunc func(ns int64, sql string, execute bool)
+
 	// BuilderFunc creates a Builder instance using the given DB instance and Executor.
 	BuilderFunc func(*DB, Executor) Builder
 
@@ -31,6 +38,8 @@ type (
 		FieldMapper FieldMapFunc
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
 		LogFunc LogFunc
+		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
+		PerfFunc PerfFunc
 
 		sqlDB      *sql.DB
 		driverName string

@@ -673,7 +673,10 @@ func main() {
 )
 ```
 
-And the following example shows how to use the `ozzo-log` package which allows logging message severities and categories
+You can also configure `DB.PerfFunc` to capture the SQL statement execution times. Each time when a SQL statement
+is executed or queried, this function will be called with the time used. This allows you to profile your DB performance.
+
+The following example shows how to use the `ozzo-log` package which allows logging message severities and categories
 and sending logged messages to different targets (e.g. files, console window, network).
 
 ```go

@@ -44,6 +44,8 @@ type Query struct {
 	LastError error
 	// LogFunc is used to log the SQL statement being executed.
 	LogFunc LogFunc
+	// PerfFunc is used to log the SQL execution time. It is ignored if nil.
+	PerfFunc PerfFunc
 }
 
 // NewQuery creates a new Query with the given SQL statement.
@@ -57,6 +59,7 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 		params:       Params{},
 		FieldMapper:  db.FieldMapper,
 		LogFunc:      db.LogFunc,
+		PerfFunc:     db.PerfFunc,
 	}
 }
 
@@ -90,11 +93,20 @@ func (q *Query) logSQL() string {
 
 // log logs a message for the currently executed SQL statement.
 func (q *Query) log(start time.Time, execute bool) {
-	t := float64(time.Now().Sub(start).Nanoseconds()) / 1e6
-	if execute {
-		q.LogFunc("[%.2fms] Execute SQL: %v", t, q.logSQL())
-	} else {
-		q.LogFunc("[%.2fms] Query SQL: %v", t, q.logSQL())
+	if q.LogFunc == nil && q.PerfFunc == nil {
+		return
+	}
+	ns := time.Now().Sub(start).Nanoseconds()
+	s := q.logSQL()
+	if q.LogFunc != nil {
+		if execute {
+			q.LogFunc("[%.2fms] Execute SQL: %v", float64(ns)/1e6, s)
+		} else {
+			q.LogFunc("[%.2fms] Query SQL: %v", float64(ns)/1e6, s)
+		}
+	}
+	if q.PerfFunc != nil {
+		q.PerfFunc(ns, s, execute)
 	}
 }
 
@@ -154,9 +166,7 @@ func (q *Query) Execute() (result sql.Result, err error) {
 		return
 	}
 
-	if q.LogFunc != nil {
-		defer q.log(time.Now(), true)
-	}
+	defer q.log(time.Now(), true)
 
 	if q.stmt == nil {
 		result, err = q.executor.Exec(q.rawSQL, params...)
@@ -224,9 +234,7 @@ func (q *Query) Rows() (rows *Rows, err error) {
 		return
 	}
 
-	if q.LogFunc != nil {
-		defer q.log(time.Now(), false)
-	}
+	defer q.log(time.Now(), false)
 
 	var rr *sql.Rows
 	if q.stmt == nil {
