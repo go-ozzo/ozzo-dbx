@@ -118,6 +118,11 @@ func (db *DB) Begin() (*Tx, error) {
 	return &Tx{db.newBuilder(tx), tx}, nil
 }
 
+// Wrap encapsulates an existing transaction.
+func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
+	return &Tx{db.newBuilder(sqlTx), sqlTx}
+}
+
 // Transactional starts a transaction and executes the given function.
 // If the function returns an error, the transaction will be rolled back.
 // Otherwise, the transaction will be committed.

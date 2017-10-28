@@ -159,6 +159,26 @@ func TestDB_ProcessSQL(t *testing.T) {
 }
 
 func TestDB_Begin(t *testing.T) {
+	tests := []struct {
+		makeTx func(db *DB) *Tx
+		desc   string
+	}{
+		{
+			makeTx: func(db *DB) *Tx {
+				tx, _ := db.Begin()
+				return tx
+			},
+			desc: "Begin",
+		},
+		{
+			makeTx: func(db *DB) *Tx {
+				sqlTx, _ := db.DB().Begin()
+				return db.Wrap(sqlTx)
+			},
+			desc: "Wrap",
+		},
+	}
+
 	db := getPreparedDB()
 
 	var (
@@ -168,34 +188,38 @@ func TestDB_Begin(t *testing.T) {
 	)
 	db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
 
-	tx, _ = db.Begin()
-	_, err1 := tx.Insert("item", Params{
-		"name": "name1",
-	}).Execute()
-	_, err2 := tx.Insert("item", Params{
-		"name": "name2",
-	}).Execute()
-	if err1 == nil && err2 == nil {
-		tx.Commit()
-	} else {
-		t.Errorf("Unexpected TX rollback: %v, %v", err1, err2)
-		tx.Rollback()
-	}
+	for _, test := range tests {
+		t.Log(test.desc)
 
-	q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
-	q.Bind(Params{"id": lastID + 1}).Row(&name)
-	assert.Equal(t, "name1", name)
-	q.Bind(Params{"id": lastID + 2}).Row(&name)
-	assert.Equal(t, "name2", name)
+		tx = test.makeTx(db)
+		_, err1 := tx.Insert("item", Params{
+			"name": "name1",
+		}).Execute()
+		_, err2 := tx.Insert("item", Params{
+			"name": "name2",
+		}).Execute()
+		if err1 == nil && err2 == nil {
+			tx.Commit()
+		} else {
+			t.Errorf("Unexpected TX rollback: %v, %v", err1, err2)
+			tx.Rollback()
+		}
 
-	tx, _ = db.Begin()
-	_, err3 := tx.NewQuery("DELETE FROM item WHERE id=7").Execute()
-	_, err4 := tx.NewQuery("DELETE FROM items WHERE id=7").Execute()
-	if err3 == nil && err4 == nil {
-		t.Error("Unexpected TX commit")
-		tx.Commit()
-	} else {
-		tx.Rollback()
+		q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
+		q.Bind(Params{"id": lastID + 1}).Row(&name)
+		assert.Equal(t, "name1", name)
+		q.Bind(Params{"id": lastID + 2}).Row(&name)
+		assert.Equal(t, "name2", name)
+
+		tx = test.makeTx(db)
+		_, err3 := tx.NewQuery("DELETE FROM item WHERE id=7").Execute()
+		_, err4 := tx.NewQuery("DELETE FROM items WHERE id=7").Execute()
+		if err3 == nil && err4 == nil {
+			t.Error("Unexpected TX commit")
+			tx.Commit()
+		} else {
+			tx.Rollback()
+		}
 	}
 }
 
