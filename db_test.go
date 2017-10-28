@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"database/sql"
 	"errors"
 	"io/ioutil"
 	"strings"
@@ -18,6 +19,15 @@ const (
 	TestDSN     = "travis:@/ozzo_dbx_test?parseTime=true"
 	FixtureFile = "testdata/mysql.sql"
 )
+
+func TestDB_NewFromDB(t *testing.T) {
+	sqlDB, err := sql.Open("mysql", TestDSN)
+	if assert.Nil(t, err) {
+		db := NewFromDB(sqlDB, "mysql")
+		assert.NotNil(t, db.sqlDB)
+		assert.NotNil(t, db.FieldMapper)
+	}
+}
 
 func TestDB_Open(t *testing.T) {
 	db, err := Open("mysql", TestDSN)
