@@ -61,6 +61,17 @@ var BuilderFuncMap = map[string]BuilderFunc{
 	"oci8":     NewOciBuilder,
 }
 
+// NewFromDB encapsulates an existing database connection.
+func NewFromDB(sqlDB *sql.DB, driverName string) *DB {
+	db := &DB{
+		driverName:  driverName,
+		sqlDB:       sqlDB,
+		FieldMapper: DefaultFieldMapFunc,
+	}
+	db.Builder = db.newBuilder(db.sqlDB)
+	return db
+}
+
 // Open opens a database specified by a driver name and data source name (DSN).
 // Note that Open does not check if DSN is specified correctly. It doesn't try to establish a DB connection either.
 // Please refer to sql.Open() for more information.
@@ -70,14 +81,7 @@ func Open(driverName, dsn string) (*DB, error) {
 		return nil, err
 	}
 
-	db := &DB{
-		driverName:  driverName,
-		sqlDB:       sqlDB,
-		FieldMapper: DefaultFieldMapFunc,
-	}
-	db.Builder = db.newBuilder(db.sqlDB)
-
-	return db, nil
+	return NewFromDB(sqlDB, driverName), nil
 }
 
 // MustOpen opens a database and establishes a connection to it.
@@ -112,6 +116,11 @@ func (db *DB) Begin() (*Tx, error) {
 		return nil, err
 	}
 	return &Tx{db.newBuilder(tx), tx}, nil
+}
+
+// Wrap encapsulates an existing transaction.
+func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
+	return &Tx{db.newBuilder(sqlTx), sqlTx}
 }
 
 // Transactional starts a transaction and executes the given function.
