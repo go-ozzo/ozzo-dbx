@@ -5,7 +5,33 @@
 [![Coverage Status](https://coveralls.io/repos/github/go-ozzo/ozzo-dbx/badge.svg?branch=master)](https://coveralls.io/github/go-ozzo/ozzo-dbx?branch=master)
 [![Go Report](https://goreportcard.com/badge/github.com/go-ozzo/ozzo-dbx)](https://goreportcard.com/report/github.com/go-ozzo/ozzo-dbx)
 
-## Other languages
+## Summary
+
+- [Description](#description)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Supported Databases](#supported-databases)
+- [Getting Started](#getting-started)
+- [Connecting to Database](#connecting-to-database)
+- [Executing Queries](#executing-queries)
+- [Binding Parameters](#binding-parameters)
+- [Building Queries](#building-queries)
+	- [Building SELECT Queries](#building-select-queries)
+	- [Building Query Conditions](#building-query-conditions)
+	- [Building Data Manipulation Queries](#building-data-manipulation-queries)
+	- [Building Schema Manipulation Queries](#building-schema-manipulation-queries)
+- [CRUD Operations](#crud-operations)
+	- [Create](#create)
+	- [Read](#read)
+	- [Update](#update)
+	- [Delete](#delete)
+	- [Null Handling](#null-handling)
+- [Quoting Table and Column Names](#quoting-table-and-column-names)
+- [Using Transactions](#using-transactions)
+- [Logging Executed SQL Statements](#logging-executed-sql-statements)
+- [Supporting New Databases](#supporting-new-databases)
+
+## Other Languages
 
 [Русский](/docs/README-ru.md)
 
@@ -457,7 +483,6 @@ If the struct has a field named `ID` or `Id`, by default the field will be treat
 If you want to use a different field as the primary key, tag it with `db:"pk"`. You may tag multiple fields
 for composite primary keys. Note that if you also want to explicitly specify the column name for a primary key field,
 you should use the tag format `db:"pk,col_name"`.
-
 
 ### Create
 
