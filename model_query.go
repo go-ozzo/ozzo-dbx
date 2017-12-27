@@ -78,7 +78,15 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 	if err != nil {
 		return err
 	}
-	indirect(q.model.dbNameMap[pkName].getField(q.model.value)).SetInt(pkValue)
+
+	pkField := indirect(q.model.dbNameMap[pkName].getField(q.model.value))
+	switch pkField.Kind() {
+	case reflect.Uint:
+		pkField.SetUint(uint64(pkValue))
+	case reflect.Int:
+		pkField.SetInt(pkValue)
+	}
+
 	return nil
 }
 
