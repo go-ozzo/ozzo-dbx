@@ -35,6 +35,8 @@ func TestDB_Open(t *testing.T) {
 	if assert.NotNil(t, db) {
 		assert.NotNil(t, db.sqlDB)
 		assert.NotNil(t, db.FieldMapper)
+		db2 := db.Clone()
+		assert.Equal(t, db.driverName, db2.driverName)
 	}
 
 	_, err = Open("xyz", TestDSN)
