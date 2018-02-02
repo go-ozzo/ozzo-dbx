@@ -99,14 +99,15 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 
 // Clone makes a shallow copy of DB.
 func (db *DB) Clone() *DB {
-	return &DB{
+	db2 := &DB{
 		driverName:  db.driverName,
 		sqlDB:       db.sqlDB,
-		Builder:     db.Builder,
 		FieldMapper: db.FieldMapper,
 		PerfFunc:    db.PerfFunc,
 		LogFunc:     db.LogFunc,
 	}
+	db2.Builder = db2.newBuilder(db.sqlDB)
+	return db2
 }
 
 // DB returns the sql.DB instance encapsulated by dbx.DB.
