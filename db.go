@@ -97,6 +97,18 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 	return db, nil
 }
 
+// Clone makes a shallow copy of DB.
+func (db *DB) Clone() *DB {
+	return &DB{
+		driverName:  db.driverName,
+		sqlDB:       db.sqlDB,
+		Builder:     db.Builder,
+		FieldMapper: db.FieldMapper,
+		PerfFunc:    db.PerfFunc,
+		LogFunc:     db.LogFunc,
+	}
+}
+
 // DB returns the sql.DB instance encapsulated by dbx.DB.
 func (db *DB) DB() *sql.DB {
 	return db.sqlDB
@@ -195,9 +207,9 @@ func (db *DB) processSQL(s string) (string, []string) {
 	})
 	s = quoteRegex.ReplaceAllStringFunc(s, func(m string) string {
 		if m[0] == '{' {
-			return db.QuoteTableName(m[2 : len(m)-2])
+			return db.QuoteTableName(m[2: len(m)-2])
 		}
-		return db.QuoteColumnName(m[2 : len(m)-2])
+		return db.QuoteColumnName(m[2: len(m)-2])
 	})
 	return s, placeholders
 }
