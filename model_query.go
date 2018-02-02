@@ -81,9 +81,9 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 
 	pkField := indirect(q.model.dbNameMap[pkName].getField(q.model.value))
 	switch pkField.Kind() {
-	case reflect.Uint:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		pkField.SetUint(uint64(pkValue))
-	case reflect.Int:
+	default:
 		pkField.SetInt(pkValue)
 	}
 
