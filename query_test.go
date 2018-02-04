@@ -140,6 +140,13 @@ func TestQuery_Rows(t *testing.T) {
 	err = db.NewQuery(sql).All(&customers4)
 	assert.NotNil(t, err)
 
+	var customers5 []Customer
+	err = db.NewQuery(`SELECT * FROM customer WHERE id=999`).All(&customers5)
+	if assert.Nil(t, err) {
+		assert.NotNil(t, customers5)
+		assert.Zero(t, len(customers5))
+	}
+
 	// One
 	var customer Customer
 	sql = `SELECT * FROM customer WHERE id={:id}`

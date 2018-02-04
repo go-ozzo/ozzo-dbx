@@ -191,6 +191,7 @@ func (q *Query) One(a interface{}) error {
 // All executes the SQL statement and populates all the resulting rows into a slice of struct or NullStringMap.
 // The slice must be given as a pointer. Each slice element must be either a struct or a NullStringMap.
 // Refer to Rows.ScanStruct() and Rows.ScanMap() for more details on how each slice element can be.
+// If the query returns no row, the slice will be an empty slice (not nil).
 func (q *Query) All(slice interface{}) error {
 	rows, err := q.Rows()
 	if err != nil {

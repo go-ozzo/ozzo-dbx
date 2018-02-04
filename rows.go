@@ -103,6 +103,11 @@ func (r *Rows) all(slice interface{}) error {
 		return VarTypeError("must be a slice of struct or NullStringMap")
 	}
 
+	if v.IsNil() {
+		// create an empty slice
+		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+	}
+
 	et := v.Type().Elem()
 
 	if et.Kind() == reflect.Map {
