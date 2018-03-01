@@ -139,18 +139,33 @@ func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
 // Transactional starts a transaction and executes the given function.
 // If the function returns an error, the transaction will be rolled back.
 // Otherwise, the transaction will be committed.
-func (db *DB) Transactional(f func(*Tx) error) error {
+func (db *DB) Transactional(f func(*Tx) error) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-	if err := f(tx); err != nil {
-		if e := tx.Rollback(); e != nil {
-			return Errors{err, e}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			if err2 := tx.Rollback(); err2 != nil {
+				if err2 == sql.ErrTxDone {
+					return
+				}
+				err = Errors{err, err2}
+			}
+		} else {
+			if err = tx.Commit(); err == sql.ErrTxDone {
+				err = nil
+			}
 		}
-		return err
-	}
-	return tx.Commit()
+	}()
+
+	err = f(tx)
+
+	return err
 }
 
 // DriverName returns the name of the DB driver.

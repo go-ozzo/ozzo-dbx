@@ -273,6 +273,42 @@ func TestDB_Transactional(t *testing.T) {
 		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
 		assert.Equal(t, "Go in Action", name)
 	}
+
+	// Rollback called within Transactional and return error
+	err = db.Transactional(func(tx *Tx) error {
+		_, err := tx.NewQuery("DELETE FROM item WHERE id=2").Execute()
+		if err != nil {
+			return err
+		}
+		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		return nil
+	})
+	if assert.NotNil(t, err) {
+		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
+		assert.Equal(t, "Go in Action", name)
+	}
+
+	// Rollback called within Transactional without returning error
+	err = db.Transactional(func(tx *Tx) error {
+		_, err := tx.NewQuery("DELETE FROM item WHERE id=2").Execute()
+		if err != nil {
+			return err
+		}
+		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
+		if err != nil {
+			tx.Rollback()
+			return nil
+		}
+		return nil
+	})
+	if assert.Nil(t, err) {
+		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
+		assert.Equal(t, "Go in Action", name)
+	}
 }
 
 func TestErrors_Error(t *testing.T) {
