@@ -51,7 +51,7 @@ as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It h
 
 ## Requirements
 
-Go 1.7 or above.
+Go 1.8 or above.
 
 ## Installation
 
@@ -59,12 +59,6 @@ Run the following command to install the package:
 
 ```
 go get github.com/go-ozzo/ozzo-dbx
-```
-
-You may also get specified release of the package by:
-
-```
-go get gopkg.in/go-ozzo/ozzo-dbx.v1
 ```
 
 In addition, install the specific DB driver package for the kind of database to be used. Please refer to
@@ -331,6 +325,18 @@ q.One(&user)
 
 // ...
 ```
+
+
+## Cancelable Queries
+
+Queries are cancelable when they are used with `context.Context`. In particular, by calling `Query.WithContext()` you
+can associate a context with a query and use the context to cancel the query while it is running. For example,
+
+```go
+q := db.NewQuery("SELECT id, name FROM users")
+rows := q.WithContext(ctx).All()
+```
+
 
 ## Building Queries
 

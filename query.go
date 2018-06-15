@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
@@ -21,8 +22,12 @@ type Params map[string]interface{}
 type Executor interface {
 	// Exec executes a SQL statement
 	Exec(query string, args ...interface{}) (sql.Result, error)
+	// ExecContext executes a SQL statement with the given context
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	// Query queries a SQL statement
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	// QueryContext queries a SQL statement with the given context
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	// Prepare creates a prepared statement
 	Prepare(query string) (*sql.Stmt, error)
 }
@@ -36,6 +41,7 @@ type Query struct {
 	params       Params
 
 	stmt *sql.Stmt
+	ctx  context.Context
 
 	// FieldMapper maps struct field names to DB column names.
 	FieldMapper FieldMapFunc
@@ -68,6 +74,17 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 // parameter placeholders with anonymous ones.
 func (q *Query) SQL() string {
 	return q.sql
+}
+
+// Context returns the context associated with the query.
+func (q *Query) Context() context.Context {
+	return q.ctx
+}
+
+// WithContext associates a context with the query.
+func (q *Query) WithContext(ctx context.Context) *Query {
+	q.ctx = ctx
+	return q
 }
 
 // logSQL returns the SQL statement with parameters being replaced with the actual values.
@@ -168,10 +185,18 @@ func (q *Query) Execute() (result sql.Result, err error) {
 
 	defer q.log(time.Now(), true)
 
-	if q.stmt == nil {
-		result, err = q.executor.Exec(q.rawSQL, params...)
+	if q.ctx == nil {
+		if q.stmt == nil {
+			result, err = q.executor.Exec(q.rawSQL, params...)
+		} else {
+			result, err = q.stmt.Exec(params...)
+		}
 	} else {
-		result, err = q.stmt.Exec(params...)
+		if q.stmt == nil {
+			result, err = q.executor.ExecContext(q.ctx, q.rawSQL, params...)
+		} else {
+			result, err = q.stmt.ExecContext(q.ctx, params...)
+		}
 	}
 	return
 }
@@ -238,10 +263,18 @@ func (q *Query) Rows() (rows *Rows, err error) {
 	defer q.log(time.Now(), false)
 
 	var rr *sql.Rows
-	if q.stmt == nil {
-		rr, err = q.executor.Query(q.rawSQL, params...)
+	if q.ctx == nil {
+		if q.stmt == nil {
+			rr, err = q.executor.Query(q.rawSQL, params...)
+		} else {
+			rr, err = q.stmt.Query(params...)
+		}
 	} else {
-		rr, err = q.stmt.Query(params...)
+		if q.stmt == nil {
+			rr, err = q.executor.QueryContext(q.ctx, q.rawSQL, params...)
+		} else {
+			rr, err = q.stmt.QueryContext(q.ctx, params...)
+		}
 	}
 	rows = &Rows{rr, q.FieldMapper}
 	return

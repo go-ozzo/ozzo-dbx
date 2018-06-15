@@ -7,6 +7,7 @@ package dbx
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"regexp"
 	"strings"
@@ -131,6 +132,15 @@ func (db *DB) Begin() (*Tx, error) {
 	return &Tx{db.newBuilder(tx), tx}, nil
 }
 
+// BeginTx starts a transaction with the given context and transaction options.
+func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	tx, err := db.sqlDB.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{db.newBuilder(tx), tx}, nil
+}
+
 // Wrap encapsulates an existing transaction.
 func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
 	return &Tx{db.newBuilder(sqlTx), sqlTx}
@@ -141,6 +151,38 @@ func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
 // Otherwise, the transaction will be committed.
 func (db *DB) Transactional(f func(*Tx) error) (err error) {
 	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			if err2 := tx.Rollback(); err2 != nil {
+				if err2 == sql.ErrTxDone {
+					return
+				}
+				err = Errors{err, err2}
+			}
+		} else {
+			if err = tx.Commit(); err == sql.ErrTxDone {
+				err = nil
+			}
+		}
+	}()
+
+	err = f(tx)
+
+	return err
+}
+
+// TransactionalContext starts a transaction and executes the given function with the given context and transaction options.
+// If the function returns an error, the transaction will be rolled back.
+// Otherwise, the transaction will be committed.
+func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f func(*Tx) error) (err error) {
+	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
 		return err
 	}
