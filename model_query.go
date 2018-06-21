@@ -1,6 +1,7 @@
 package dbx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -15,6 +16,7 @@ type (
 	// ModelQuery represents a query associated with a struct model.
 	ModelQuery struct {
 		db        *DB
+		ctx       context.Context
 		builder   Builder
 		model     *structValue
 		exclude   []string
@@ -36,6 +38,18 @@ func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder
 	if q.model == nil {
 		q.lastError = VarTypeError("must be a pointer to a struct representing the model")
 	}
+	return q
+}
+
+
+// Context returns the context associated with the query.
+func (q *ModelQuery) Context() context.Context {
+	return q.ctx
+}
+
+// WithContext associates a context with the query.
+func (q *ModelQuery) WithContext(ctx context.Context) *ModelQuery {
+	q.ctx = ctx
 	return q
 }
 
@@ -68,17 +82,25 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 	}
 
 	if pkName == "" {
-		_, err := q.builder.Insert(q.model.tableName, Params(cols)).Execute()
+		_, err := q.builder.Insert(q.model.tableName, Params(cols)).WithContext(q.ctx).Execute()
 		return err
 	}
 
 	// handle auto-incremental PK
-	query := q.builder.Insert(q.model.tableName, Params(cols))
+	query := q.builder.Insert(q.model.tableName, Params(cols)).WithContext(q.ctx)
 	pkValue, err := insertAndReturnPK(q.db, query, pkName)
 	if err != nil {
 		return err
 	}
-	indirect(q.model.dbNameMap[pkName].getField(q.model.value)).SetInt(pkValue)
+
+	pkField := indirect(q.model.dbNameMap[pkName].getField(q.model.value))
+	switch pkField.Kind() {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		pkField.SetUint(uint64(pkValue))
+	default:
+		pkField.SetInt(pkValue)
+	}
+
 	return nil
 }
 
@@ -134,7 +156,7 @@ func (q *ModelQuery) Update(attrs ...string) error {
 	for name := range pk {
 		delete(cols, name)
 	}
-	_, err := q.builder.Update(q.model.tableName, Params(cols), HashExp(pk)).Execute()
+	_, err := q.builder.Update(q.model.tableName, Params(cols), HashExp(pk)).WithContext(q.ctx).Execute()
 	return err
 }
 
@@ -147,6 +169,6 @@ func (q *ModelQuery) Delete() error {
 	if len(pk) == 0 {
 		return MissingPKError
 	}
-	_, err := q.builder.Delete(q.model.tableName, HashExp(pk)).Execute()
+	_, err := q.builder.Delete(q.model.tableName, HashExp(pk)).WithContext(q.ctx).Execute()
 	return err
 }

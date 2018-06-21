@@ -101,6 +101,12 @@ func (r *Rows) all(slice interface{}) error {
 	if v.Kind() != reflect.Slice {
 		return VarTypeError("not a slice, must be a slice of struct or NullStringMap")
 	}
+
+	if v.IsNil() {
+		// create an empty slice
+		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+	}
+
 	if !v.CanSet() {
 		return VarTypeError("slice not settable")
 	}

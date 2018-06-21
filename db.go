@@ -7,6 +7,7 @@ package dbx
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"regexp"
 	"strings"
@@ -18,6 +19,13 @@ type (
 	// is provided, it will be treated as the log message. If multiple parameters
 	// are provided, they will be passed to fmt.Sprintf() to generate the log message.
 	LogFunc func(format string, a ...interface{})
+
+	// PerfFunc is called when a query finishes execution.
+	// The query execution time is passed to this function so that the DB performance
+	// can be profiled. The "ns" parameter gives the number of nanoseconds that the
+	// SQL statement takes to execute, while the "execute" parameter indicates whether
+	// the SQL statement is executed or queried (usually SELECT statements).
+	PerfFunc func(ns int64, sql string, execute bool)
 
 	// BuilderFunc creates a Builder instance using the given DB instance and Executor.
 	BuilderFunc func(*DB, Executor) Builder
@@ -31,6 +39,8 @@ type (
 		FieldMapper FieldMapFunc
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
 		LogFunc LogFunc
+		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
+		PerfFunc PerfFunc
 
 		sqlDB      *sql.DB
 		driverName string
@@ -52,6 +62,17 @@ var BuilderFuncMap = map[string]BuilderFunc{
 	"oci8":     NewOciBuilder,
 }
 
+// NewFromDB encapsulates an existing database connection.
+func NewFromDB(sqlDB *sql.DB, driverName string) *DB {
+	db := &DB{
+		driverName:  driverName,
+		sqlDB:       sqlDB,
+		FieldMapper: DefaultFieldMapFunc,
+	}
+	db.Builder = db.newBuilder(db.sqlDB)
+	return db
+}
+
 // Open opens a database specified by a driver name and data source name (DSN).
 // Note that Open does not check if DSN is specified correctly. It doesn't try to establish a DB connection either.
 // Please refer to sql.Open() for more information.
@@ -61,14 +82,7 @@ func Open(driverName, dsn string) (*DB, error) {
 		return nil, err
 	}
 
-	db := &DB{
-		driverName:  driverName,
-		sqlDB:       sqlDB,
-		FieldMapper: DefaultFieldMapFunc,
-	}
-	db.Builder = db.newBuilder(db.sqlDB)
-
-	return db, nil
+	return NewFromDB(sqlDB, driverName), nil
 }
 
 // MustOpen opens a database and establishes a connection to it.
@@ -82,6 +96,19 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// Clone makes a shallow copy of DB.
+func (db *DB) Clone() *DB {
+	db2 := &DB{
+		driverName:  db.driverName,
+		sqlDB:       db.sqlDB,
+		FieldMapper: db.FieldMapper,
+		PerfFunc:    db.PerfFunc,
+		LogFunc:     db.LogFunc,
+	}
+	db2.Builder = db2.newBuilder(db.sqlDB)
+	return db2
 }
 
 // DB returns the sql.DB instance encapsulated by dbx.DB.
@@ -105,21 +132,82 @@ func (db *DB) Begin() (*Tx, error) {
 	return &Tx{db.newBuilder(tx), tx}, nil
 }
 
+// BeginTx starts a transaction with the given context and transaction options.
+func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	tx, err := db.sqlDB.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{db.newBuilder(tx), tx}, nil
+}
+
+// Wrap encapsulates an existing transaction.
+func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
+	return &Tx{db.newBuilder(sqlTx), sqlTx}
+}
+
 // Transactional starts a transaction and executes the given function.
 // If the function returns an error, the transaction will be rolled back.
 // Otherwise, the transaction will be committed.
-func (db *DB) Transactional(f func(*Tx) error) error {
+func (db *DB) Transactional(f func(*Tx) error) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-	if err := f(tx); err != nil {
-		if e := tx.Rollback(); e != nil {
-			return Errors{err, e}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			if err2 := tx.Rollback(); err2 != nil {
+				if err2 == sql.ErrTxDone {
+					return
+				}
+				err = Errors{err, err2}
+			}
+		} else {
+			if err = tx.Commit(); err == sql.ErrTxDone {
+				err = nil
+			}
 		}
+	}()
+
+	err = f(tx)
+
+	return err
+}
+
+// TransactionalContext starts a transaction and executes the given function with the given context and transaction options.
+// If the function returns an error, the transaction will be rolled back.
+// Otherwise, the transaction will be committed.
+func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f func(*Tx) error) (err error) {
+	tx, err := db.BeginTx(ctx, opts)
+	if err != nil {
 		return err
 	}
-	return tx.Commit()
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			if err2 := tx.Rollback(); err2 != nil {
+				if err2 == sql.ErrTxDone {
+					return
+				}
+				err = Errors{err, err2}
+			}
+		} else {
+			if err = tx.Commit(); err == sql.ErrTxDone {
+				err = nil
+			}
+		}
+	}()
+
+	err = f(tx)
+
+	return err
 }
 
 // DriverName returns the name of the DB driver.
@@ -177,9 +265,9 @@ func (db *DB) processSQL(s string) (string, []string) {
 	})
 	s = quoteRegex.ReplaceAllStringFunc(s, func(m string) string {
 		if m[0] == '{' {
-			return db.QuoteTableName(m[2 : len(m)-2])
+			return db.QuoteTableName(m[2: len(m)-2])
 		}
-		return db.QuoteColumnName(m[2 : len(m)-2])
+		return db.QuoteColumnName(m[2: len(m)-2])
 	})
 	return s, placeholders
 }

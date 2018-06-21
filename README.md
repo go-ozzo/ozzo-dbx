@@ -5,7 +5,33 @@
 [![Coverage Status](https://coveralls.io/repos/github/go-ozzo/ozzo-dbx/badge.svg?branch=master)](https://coveralls.io/github/go-ozzo/ozzo-dbx?branch=master)
 [![Go Report](https://goreportcard.com/badge/github.com/go-ozzo/ozzo-dbx)](https://goreportcard.com/report/github.com/go-ozzo/ozzo-dbx)
 
-## Other languages
+## Summary
+
+- [Description](#description)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Supported Databases](#supported-databases)
+- [Getting Started](#getting-started)
+- [Connecting to Database](#connecting-to-database)
+- [Executing Queries](#executing-queries)
+- [Binding Parameters](#binding-parameters)
+- [Building Queries](#building-queries)
+	- [Building SELECT Queries](#building-select-queries)
+	- [Building Query Conditions](#building-query-conditions)
+	- [Building Data Manipulation Queries](#building-data-manipulation-queries)
+	- [Building Schema Manipulation Queries](#building-schema-manipulation-queries)
+- [CRUD Operations](#crud-operations)
+	- [Create](#create)
+	- [Read](#read)
+	- [Update](#update)
+	- [Delete](#delete)
+	- [Null Handling](#null-handling)
+- [Quoting Table and Column Names](#quoting-table-and-column-names)
+- [Using Transactions](#using-transactions)
+- [Logging Executed SQL Statements](#logging-executed-sql-statements)
+- [Supporting New Databases](#supporting-new-databases)
+
+## Other Languages
 
 [Русский](/docs/README-ru.md)
 
@@ -25,7 +51,7 @@ as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It h
 
 ## Requirements
 
-Go 1.5 or above.
+Go 1.8 or above.
 
 ## Installation
 
@@ -33,12 +59,6 @@ Run the following command to install the package:
 
 ```
 go get github.com/go-ozzo/ozzo-dbx
-```
-
-You may also get specified release of the package by:
-
-```
-go get gopkg.in/go-ozzo/ozzo-dbx.v1
 ```
 
 In addition, install the specific DB driver package for the kind of database to be used. Please refer to
@@ -306,6 +326,18 @@ q.One(&user)
 // ...
 ```
 
+
+## Cancelable Queries
+
+Queries are cancelable when they are used with `context.Context`. In particular, by calling `Query.WithContext()` you
+can associate a context with a query and use the context to cancel the query while it is running. For example,
+
+```go
+q := db.NewQuery("SELECT id, name FROM users")
+rows := q.WithContext(ctx).All()
+```
+
+
 ## Building Queries
 
 Instead of writing plain SQLs, `ozzo-dbx` allows you to build SQLs programmatically, which often leads to cleaner,
@@ -457,7 +489,6 @@ If the struct has a field named `ID` or `Id`, by default the field will be treat
 If you want to use a different field as the primary key, tag it with `db:"pk"`. You may tag multiple fields
 for composite primary keys. Note that if you also want to explicitly specify the column name for a primary key field,
 you should use the tag format `db:"pk,col_name"`.
-
 
 ### Create
 
@@ -673,7 +704,10 @@ func main() {
 )
 ```
 
-And the following example shows how to use the `ozzo-log` package which allows logging message severities and categories
+You can also configure `DB.PerfFunc` to capture the SQL statement execution times. Each time when a SQL statement
+is executed or queried, this function will be called with the time used. This allows you to profile your DB performance.
+
+The following example shows how to use the `ozzo-log` package which allows logging message severities and categories
 and sending logged messages to different targets (e.g. files, console window, network).
 
 ```go
