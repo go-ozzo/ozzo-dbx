@@ -16,6 +16,9 @@ type (
 	// FieldMapFunc converts a struct field name into a DB column name.
 	FieldMapFunc func(string) string
 
+	// TableMapFunc converts a sample struct into a DB table name.
+	TableMapFunc func(value interface{}) string
+
 	structInfo struct {
 		nameMap   map[string]*fieldInfo // mapping from struct field names to field infos
 		dbNameMap map[string]*fieldInfo // mapping from db column names to field infos
@@ -58,6 +61,27 @@ func DefaultFieldMapFunc(f string) string {
 	return strings.ToLower(fieldRegex.ReplaceAllString(f, "${1}_$2"))
 }
 
+// DefaultTableMapFunc returns the table name corresponding to the given model struct or slice of structs.
+// Do not call this method in the model's TableName() method, or it will cause infinite loop.
+func DefaultTableMapFunc(a interface{}) string {
+	if tm, ok := a.(TableModel); ok {
+		v := reflect.ValueOf(a)
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			a = reflect.New(v.Type().Elem()).Interface()
+			return a.(TableModel).TableName()
+		}
+		return tm.TableName()
+	}
+	t := reflect.TypeOf(a)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() == reflect.Slice {
+		return DefaultTableMapFunc(reflect.Zero(t.Elem()).Interface())
+	}
+	return DefaultFieldMapFunc(t.Name())
+}
+
 func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 	muStructInfoMap.Lock()
 	defer muStructInfoMap.Unlock()
@@ -77,16 +101,16 @@ func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 	return si
 }
 
-func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
+func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc TableMapFunc) *structValue {
 	value := reflect.ValueOf(model)
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() {
 		return nil
 	}
 
 	return &structValue{
-		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), mapper),
+		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), fieldMapFunc),
 		value:      value.Elem(),
-		tableName:  GetTableName(model),
+		tableName:  tableMapFunc(model),
 	}
 }
 
@@ -244,25 +268,4 @@ func indirect(v reflect.Value) reflect.Value {
 		v = v.Elem()
 	}
 	return v
-}
-
-// GetTableName returns the table name corresponding to the given model struct or slice of structs.
-// Do not call this method in the model's TableName() method, or it will cause infinite loop.
-func GetTableName(a interface{}) string {
-	if tm, ok := a.(TableModel); ok {
-		v := reflect.ValueOf(a)
-		if v.Kind() == reflect.Ptr && v.IsNil() {
-			a = reflect.New(v.Type().Elem()).Interface()
-			return a.(TableModel).TableName()
-		}
-		return tm.TableName()
-	}
-	t := reflect.TypeOf(a)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	if t.Kind() == reflect.Slice {
-		return GetTableName(reflect.Zero(t.Elem()).Interface())
-	}
-	return DefaultFieldMapFunc(t.Name())
 }
