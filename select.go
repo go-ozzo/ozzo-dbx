@@ -15,6 +15,9 @@ type SelectQuery struct {
 	// FieldMapper maps struct field names to DB column names.
 	FieldMapper FieldMapFunc
 
+	// TableMapper maps structs to DB table names.
+	TableMapper TableMapFunc
+
 	builder Builder
 
 	selects      []string
@@ -58,6 +61,7 @@ func NewSelectQuery(builder Builder, db *DB) *SelectQuery {
 		limit:       -1,
 		params:      Params{},
 		FieldMapper: db.FieldMapper,
+		TableMapper: db.TableMapper,
 	}
 }
 
@@ -272,7 +276,7 @@ func (s *SelectQuery) Build() *Query {
 // Note that when the query has no rows in the result set, an sql.ErrNoRows will be returned.
 func (s *SelectQuery) One(a interface{}) error {
 	if len(s.from) == 0 {
-		if tableName := GetTableName(a); tableName != "" {
+		if tableName := s.TableMapper(a); tableName != "" {
 			s.from = []string{tableName}
 		}
 	}
@@ -311,7 +315,7 @@ func (s *SelectQuery) Model(pk, model interface{}) error {
 // or the TableName() method if the slice element implements the TableModel interface.
 func (s *SelectQuery) All(slice interface{}) error {
 	if len(s.from) == 0 {
-		if tableName := GetTableName(slice); tableName != "" {
+		if tableName := s.TableMapper(slice); tableName != "" {
 			s.from = []string{tableName}
 		}
 	}

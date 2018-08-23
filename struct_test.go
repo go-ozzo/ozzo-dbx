@@ -81,7 +81,7 @@ func Test_structValue_columns(t *testing.T) {
 		Status: 2,
 		Email:  "abc@example.com",
 	}
-	sv := newStructValue(&customer, DefaultFieldMapFunc)
+	sv := newStructValue(&customer, DefaultFieldMapFunc, DefaultTableMapFunc)
 	cols := sv.columns(nil, nil)
 	assert.Equal(t, map[string]interface{}{"id": 1, "name": "abc", "status": 2, "email": "abc@example.com", "address": sql.NullString{}}, cols)
 
@@ -94,7 +94,7 @@ func Test_structValue_columns(t *testing.T) {
 	cols = sv.columns(nil, []string{"ID", "Address"})
 	assert.Equal(t, map[string]interface{}{"name": "abc", "status": 2, "email": "abc@example.com"}, cols)
 
-	sv = newStructValue(&customer, nil)
+	sv = newStructValue(&customer, nil, DefaultTableMapFunc)
 	cols = sv.columns([]string{"ID", "Name"}, []string{"ID"})
 	assert.Equal(t, map[string]interface{}{"Name": "abc"}, cols)
 }
@@ -109,8 +109,8 @@ func TestIssue37(t *testing.T) {
 	ev := struct {
 		Customer
 		Status string
-	}{customer, "20"}
-	sv := newStructValue(&ev, nil)
+	} {customer, "20"}
+	sv := newStructValue(&ev, nil, DefaultTableMapFunc)
 	cols := sv.columns([]string{"ID", "Status"}, nil)
 	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
 
@@ -134,58 +134,58 @@ func (*SomeTable) TableName() string {
 func Test_getTableName(t *testing.T) {
 	{
 		var c Customer
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c *Customer
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c MyCustomer
-		assert.Equal(t, "my_customer", GetTableName(c))
+		assert.Equal(t, "my_customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c []Customer
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c *[]Customer
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c []*Customer
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c []MyCustomer
-		assert.Equal(t, "my_customer", GetTableName(c))
+		assert.Equal(t, "my_customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c []CustomerPtr
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c **int
-		assert.Equal(t, "", GetTableName(c))
+		assert.Equal(t, "", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c ***[]Customer
-		assert.Equal(t, "customer", GetTableName(c))
+		assert.Equal(t, "customer", DefaultTableMapFunc(c))
 	}
 
 	{
 		func(i interface{}) {
 			func(c interface{}) {
-				assert.Equal(t, "customer", GetTableName(c))
+				assert.Equal(t, "customer", DefaultTableMapFunc(c))
 			}(&i)
 		}(&Customer{})
 	}
@@ -193,19 +193,19 @@ func Test_getTableName(t *testing.T) {
 	{
 		func(i interface{}) {
 			func(c interface{}) {
-				assert.Equal(t, "customer", GetTableName(&c))
+				assert.Equal(t, "customer", DefaultTableMapFunc(&c))
 			}(&i)
 		}(&Customer{})
 	}
 
 	{
 		var c *SomeTable
-		assert.Equal(t, "strange_name", GetTableName(c))
+		assert.Equal(t, "strange_name", DefaultTableMapFunc(c))
 	}
 
 	{
 		var c **SomeTable
-		assert.Equal(t, "strange_name", GetTableName(c))
+		assert.Equal(t, "strange_name", DefaultTableMapFunc(c))
 	}
 }
 

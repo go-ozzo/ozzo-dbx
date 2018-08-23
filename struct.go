@@ -16,6 +16,9 @@ type (
 	// FieldMapFunc converts a struct field name into a DB column name.
 	FieldMapFunc func(string) string
 
+	// TableMapFunc converts a sample struct into a DB table name.
+	TableMapFunc func(value interface{}) string
+
 	structInfo struct {
 		nameMap   map[string]*fieldInfo // mapping from struct field names to field infos
 		dbNameMap map[string]*fieldInfo // mapping from db column names to field infos
@@ -58,6 +61,44 @@ func DefaultFieldMapFunc(f string) string {
 	return strings.ToLower(fieldRegex.ReplaceAllString(f, "${1}_$2"))
 }
 
+// DefaultTableMapFunc returns the table name corresponding to the given model struct or slice of structs.
+// Do not call this method in the model's TableName() method, or it will cause infinite loop.
+func DefaultTableMapFunc(a interface{}) string {
+	if tm, ok := a.(TableModel); ok {
+		v := reflect.ValueOf(a)
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			a = reflect.New(v.Type().Elem()).Interface()
+			return a.(TableModel).TableName()
+		}
+		return tm.TableName()
+	}
+
+	tmt := reflect.TypeOf((*TableModel)(nil)).Elem()
+	v := indirect0(reflect.ValueOf(a), func(v reflect.Value) bool {
+		// stop once we found something that implements TableModel
+		return v.Type().Implements(tmt)
+
+	}, false, false)
+	// may well be our early exit got us here
+	t := v.Type()
+	for t.Kind() == reflect.Ptr && !t.Implements(tmt) {
+		t = t.Elem()
+	}
+	if t.Implements(tmt) {
+		return DefaultTableMapFunc(reflect.New(t).Elem().Interface())
+	}
+	// a slice may have elements of the type we're searching for
+	if t.Kind() == reflect.Slice {
+		return DefaultTableMapFunc(reflect.New(t.Elem()).Elem().Interface())
+	}
+	// or a struct where we derive the name from
+	if t.Kind() != reflect.Struct {
+		// otherwise we can't do anything with that value
+		return ""
+	}
+	return DefaultFieldMapFunc(t.Name())
+}
+
 func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 	muStructInfoMap.Lock()
 	defer muStructInfoMap.Unlock()
@@ -77,7 +118,7 @@ func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 	return si
 }
 
-func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
+func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc TableMapFunc) *structValue {
 	value := indirect0(reflect.ValueOf(model), nil, false, true)
 	if value.Kind() != reflect.Struct {
 		return nil
@@ -86,7 +127,7 @@ func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
 	return &structValue{
 		structInfo: getStructInfo(value.Type(), mapper),
 		value:      value,
-		tableName:  GetTableName(model),
+		tableName:  tableMapFunc(model),
 	}
 }
 
@@ -240,44 +281,6 @@ func indirect(v reflect.Value) reflect.Value {
 	return indirect0(v, nil, false, true)
 }
 
-// GetTableName returns the table name corresponding to the given model struct or slice of structs.
-// Do not call this method in the model's TableName() method, or it will cause infinite loop.
-func GetTableName(a interface{}) string {
-	if tm, ok := a.(TableModel); ok {
-		v := reflect.ValueOf(a)
-		if v.Kind() == reflect.Ptr && v.IsNil() {
-			a = reflect.New(v.Type().Elem()).Interface()
-			return a.(TableModel).TableName()
-		}
-		return tm.TableName()
-	}
-
-	tmt := reflect.TypeOf((*TableModel)(nil)).Elem()
-	v := indirect0(reflect.ValueOf(a), func(v reflect.Value) bool {
-		// stop once we found something that implements TableModel
-		return v.Type().Implements(tmt)
-
-	}, false, false)
-	// may well be our early exit got us here
-	t := v.Type()
-	for t.Kind() == reflect.Ptr && !t.Implements(tmt) {
-		t = t.Elem()
-	}
-	if t.Implements(tmt) {
-		return GetTableName(reflect.New(t).Elem().Interface())
-	}
-	// a slice may have elements of the type we're searching for
-	if t.Kind() == reflect.Slice {
-		return GetTableName(reflect.New(t.Elem()).Elem().Interface())
-	}
-	// or a struct where we derive the name from
-	if t.Kind() != reflect.Struct {
-		// otherwise we can't do anything with that value
-		return ""
-	}
-	return DefaultFieldMapFunc(t.Name())
-}
-
 // resolves the given value through pointers and interfaces, returning the actual value found.
 // When init == true it initializes empty pointers on the way down. Once the match function returns
 // true when called with the current value and type handled, the process is stopped early.
@@ -333,3 +336,4 @@ FOR:
 		return v
 	}
 }
+

@@ -33,7 +33,7 @@ func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder
 	q := &ModelQuery{
 		db:      db,
 		builder: builder,
-		model:   newStructValue(model, fieldMapFunc),
+		model:   newStructValue(model, fieldMapFunc, db.TableMapper),
 	}
 	if q.model == nil {
 		q.lastError = VarTypeError("must be a pointer to a struct representing the model")
