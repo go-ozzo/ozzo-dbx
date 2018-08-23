@@ -82,7 +82,7 @@ func (b *PgsqlBuilder) Upsert(table string, cols Params, constraints ...string) 
 		q.sql += " ON CONFLICT DO UPDATE SET " + strings.Join(lines, ", ")
 	}
 
-	return q
+	return b.NewQuery(q.sql).Bind(q.params)
 }
 
 // DropIndex creates a Query that can be used to remove the named index from a table.

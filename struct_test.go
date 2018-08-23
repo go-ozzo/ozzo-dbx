@@ -118,7 +118,7 @@ func TestIssue37(t *testing.T) {
 		Status string
 		Customer
 	}{"20", customer}
-	sv = newStructValue(&ev2, nil)
+	sv = newStructValue(&ev2, nil, DefaultTableMapFunc)
 	cols = sv.columns([]string{"ID", "Status"}, nil)
 	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
 }

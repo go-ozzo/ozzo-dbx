@@ -125,7 +125,7 @@ func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc T
 	}
 
 	return &structValue{
-		structInfo: getStructInfo(value.Type(), mapper),
+		structInfo: getStructInfo(value.Type(), fieldMapFunc),
 		value:      value,
 		tableName:  tableMapFunc(model),
 	}

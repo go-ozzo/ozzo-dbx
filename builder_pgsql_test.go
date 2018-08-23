@@ -16,11 +16,12 @@ func TestPgsqlBuilder_Upsert(t *testing.T) {
 		"name": "James",
 		"age":  30,
 	}, "id")
-	assert.Equal(t, q.SQL(), `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "age"={:p2}, "name"={:p3}`, "t1")
-	assert.Equal(t, q.Params()["p0"], 30, "t2")
-	assert.Equal(t, q.Params()["p1"], "James", "t3")
-	assert.Equal(t, q.Params()["p2"], 30, "t2")
-	assert.Equal(t, q.Params()["p3"], "James", "t3")
+	assert.Equal(t, q.sql, `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "age"={:p2}, "name"={:p3}`, "t1")
+	assert.Equal(t, q.rawSQL, `INSERT INTO "users" ("age", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "age"=$3, "name"=$4`, "t2")
+	assert.Equal(t, q.Params()["p0"], 30, "t3")
+	assert.Equal(t, q.Params()["p1"], "James", "t4")
+	assert.Equal(t, q.Params()["p2"], 30, "t5")
+	assert.Equal(t, q.Params()["p3"], "James", "t6")
 }
 func TestPgsqlBuilder_DropIndex(t *testing.T) {
 	b := getPgsqlBuilder()
