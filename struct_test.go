@@ -99,18 +99,18 @@ func TestIssue37(t *testing.T) {
 		Status: 2,
 		Email:  "abc@example.com",
 	}
-	ev := struct{
+	ev := struct {
 		Customer
 		Status string
-	} {customer, "20"}
+	}{customer, "20"}
 	sv := newStructValue(&ev, nil)
 	cols := sv.columns([]string{"ID", "Status"}, nil)
 	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)
 
-	ev2 := struct{
+	ev2 := struct {
 		Status string
 		Customer
-	} {"20", customer}
+	}{"20", customer}
 	sv = newStructValue(&ev2, nil)
 	cols = sv.columns([]string{"ID", "Status"}, nil)
 	assert.Equal(t, map[string]interface{}{"ID": 1, "Status": "20"}, cols)

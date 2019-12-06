@@ -41,7 +41,6 @@ func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder
 	return q
 }
 
-
 // Context returns the context associated with the query.
 func (q *ModelQuery) Context() context.Context {
 	return q.ctx

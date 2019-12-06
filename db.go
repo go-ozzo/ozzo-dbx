@@ -265,9 +265,9 @@ func (db *DB) processSQL(s string) (string, []string) {
 	})
 	s = quoteRegex.ReplaceAllStringFunc(s, func(m string) string {
 		if m[0] == '{' {
-			return db.QuoteTableName(m[2: len(m)-2])
+			return db.QuoteTableName(m[2 : len(m)-2])
 		}
-		return db.QuoteColumnName(m[2: len(m)-2])
+		return db.QuoteColumnName(m[2 : len(m)-2])
 	})
 	return s, placeholders
 }
