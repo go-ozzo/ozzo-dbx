@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type (
@@ -27,6 +28,16 @@ type (
 	// the SQL statement is executed or queried (usually SELECT statements).
 	PerfFunc func(ns int64, sql string, execute bool)
 
+	// QueryLogFunc is called each time when performing a SQL query.
+	// The "t" parameter gives the time that the SQL statement takes to execute,
+	// while rows and err are the result of the query.
+	QueryLogFunc func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error)
+
+	// ExecLogFunc is called each time when a SQL statement is executed.
+	// The "t" parameter gives the time that the SQL statement takes to execute,
+	// while result and err refer to the result of the execution.
+	ExecLogFunc func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error)
+
 	// BuilderFunc creates a Builder instance using the given DB instance and Executor.
 	BuilderFunc func(*DB, Executor) Builder
 
@@ -38,9 +49,15 @@ type (
 		// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
 		FieldMapper FieldMapFunc
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
+		// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 		LogFunc LogFunc
 		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
+		// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 		PerfFunc PerfFunc
+		// QueryLogFunc is called each time when performing a SQL query that returns data.
+		QueryLogFunc QueryLogFunc
+		// ExecLogFunc is called each time when a SQL statement is executed.
+		ExecLogFunc ExecLogFunc
 
 		sqlDB      *sql.DB
 		driverName string
@@ -101,11 +118,13 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 // Clone makes a shallow copy of DB.
 func (db *DB) Clone() *DB {
 	db2 := &DB{
-		driverName:  db.driverName,
-		sqlDB:       db.sqlDB,
-		FieldMapper: db.FieldMapper,
-		PerfFunc:    db.PerfFunc,
-		LogFunc:     db.LogFunc,
+		driverName:   db.driverName,
+		sqlDB:        db.sqlDB,
+		FieldMapper:  db.FieldMapper,
+		PerfFunc:     db.PerfFunc,
+		LogFunc:      db.LogFunc,
+		QueryLogFunc: db.QueryLogFunc,
+		ExecLogFunc:  db.ExecLogFunc,
 	}
 	db2.Builder = db2.newBuilder(db.sqlDB)
 	return db2
