@@ -49,9 +49,15 @@ type Query struct {
 	// LastError is cleared by Execute(), Row(), Rows(), One(), and All().
 	LastError error
 	// LogFunc is used to log the SQL statement being executed.
+	// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 	LogFunc LogFunc
 	// PerfFunc is used to log the SQL execution time. It is ignored if nil.
+	// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 	PerfFunc PerfFunc
+	// QueryLogFunc is called each time when performing a SQL query that returns data.
+	QueryLogFunc QueryLogFunc
+	// ExecLogFunc is called each time when a SQL statement is executed.
+	ExecLogFunc ExecLogFunc
 }
 
 // NewQuery creates a new Query with the given SQL statement.
@@ -66,6 +72,8 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 		FieldMapper:  db.FieldMapper,
 		LogFunc:      db.LogFunc,
 		PerfFunc:     db.PerfFunc,
+		QueryLogFunc: db.QueryLogFunc,
+		ExecLogFunc:  db.ExecLogFunc,
 	}
 }
 
@@ -183,7 +191,8 @@ func (q *Query) Execute() (result sql.Result, err error) {
 		return
 	}
 
-	defer q.log(time.Now(), true)
+	start := time.Now()
+	defer q.log(start, true)
 
 	if q.ctx == nil {
 		if q.stmt == nil {
@@ -197,6 +206,10 @@ func (q *Query) Execute() (result sql.Result, err error) {
 		} else {
 			result, err = q.stmt.ExecContext(q.ctx, params...)
 		}
+	}
+
+	if q.ExecLogFunc != nil {
+		q.ExecLogFunc(q.ctx, time.Now().Sub(start), q.logSQL(), result, err)
 	}
 	return
 }
@@ -260,7 +273,8 @@ func (q *Query) Rows() (rows *Rows, err error) {
 		return
 	}
 
-	defer q.log(time.Now(), false)
+	start := time.Now()
+	defer q.log(start, false)
 
 	var rr *sql.Rows
 	if q.ctx == nil {
@@ -277,6 +291,10 @@ func (q *Query) Rows() (rows *Rows, err error) {
 		}
 	}
 	rows = &Rows{rr, q.FieldMapper}
+
+	if q.QueryLogFunc != nil {
+		q.QueryLogFunc(q.ctx, time.Now().Sub(start), q.logSQL(), rr, err)
+	}
 	return
 }
 
