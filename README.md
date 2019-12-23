@@ -686,8 +686,14 @@ fmt.Println(err)
 
 ## Logging Executed SQL Statements
 
-When `DB.LogFunc` is configured with a compatible log function, all SQL statements being executed will be logged.
-The following example shows how to configure the logger using the standard `log` package:
+You can log and instrument DB queries by installing loggers with a DB connection. There are three kinds of loggers you
+can install:
+* `DB.LogFunc`: this is called each time when a SQL statement is queried or executed. The function signature is the
+  same as that of `fmt.Printf`, which makes it very easy to use. 
+* `DB.QueryLogFunc`: this is called each time when querying with a SQL statement.
+* `DB.ExecLogFunc`: this is called when executing a SQL statement.
+ 
+The following example shows how you can make use of these loggers.
 
 ```go
 import (
@@ -698,37 +704,20 @@ import (
 
 func main() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
+
+	// simple logging
 	db.LogFunc = log.Printf
 
+	// or you can use the following more flexible logging
+	db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
+		log.Printf("[%.2fms] Query SQL: %v", float64(t.Milliseconds()), sql))
+	}
+	db.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
+		log.Printf("[%.2fms] Execute SQL: %v", float64(t.Milliseconds()), sql))
+	}
 	// ...
 )
-```
-
-You can also configure `DB.PerfFunc` to capture the SQL statement execution times. Each time when a SQL statement
-is executed or queried, this function will be called with the time used. This allows you to profile your DB performance.
-
-The following example shows how to use the `ozzo-log` package which allows logging message severities and categories
-and sending logged messages to different targets (e.g. files, console window, network).
-
-```go
-import (
-	"fmt"
-	"github.com/go-ozzo/ozzo-dbx"
-	"github.com/go-ozzo/ozzo-log"
-	_ "github.com/go-sql-driver/mysql"
-)
-
-func main() {
-	logger := log.NewLogger()
-	logger.Targets = []log.Target{log.NewConsoleTarget()}
-	logger.Open()
-
-	db, _ := dbx.Open("mysql", "user:pass@/example")
-	db.LogFunc = logger.Info
-
-	// ...
-)
-```
+``` 
 
 ## Supporting New Databases
 

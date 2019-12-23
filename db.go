@@ -49,7 +49,6 @@ type (
 		// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
 		FieldMapper FieldMapFunc
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
-		// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 		LogFunc LogFunc
 		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
 		// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
