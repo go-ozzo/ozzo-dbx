@@ -68,6 +68,7 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 		rawSQL:       rawSQL,
 		placeholders: placeholders,
 		params:       Params{},
+		ctx:          db.ctx,
 		FieldMapper:  db.FieldMapper,
 		LogFunc:      db.LogFunc,
 		PerfFunc:     db.PerfFunc,

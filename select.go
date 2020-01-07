@@ -59,6 +59,7 @@ func NewSelectQuery(builder Builder, db *DB) *SelectQuery {
 		union:       []UnionInfo{},
 		limit:       -1,
 		params:      Params{},
+		ctx:         db.ctx,
 		FieldMapper: db.FieldMapper,
 	}
 }

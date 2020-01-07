@@ -60,6 +60,7 @@ type (
 
 		sqlDB      *sql.DB
 		driverName string
+		ctx        context.Context
 	}
 
 	// Errors represents a list of errors.
@@ -129,6 +130,19 @@ func (db *DB) Clone() *DB {
 	return db2
 }
 
+// WithContext returns a new instance of DB associated with the given context.
+func (db *DB) WithContext(ctx context.Context) *DB {
+	db2 := db.Clone()
+	db2.ctx = ctx
+	return db2
+}
+
+// Context returns the context associated with the DB instance.
+// It returns nil if no context is associated.
+func (db *DB) Context() context.Context {
+	return db.ctx
+}
+
 // DB returns the sql.DB instance encapsulated by dbx.DB.
 func (db *DB) DB() *sql.DB {
 	return db.sqlDB
@@ -143,7 +157,13 @@ func (db *DB) Close() error {
 
 // Begin starts a transaction.
 func (db *DB) Begin() (*Tx, error) {
-	tx, err := db.sqlDB.Begin()
+	var tx *sql.Tx
+	var err error
+	if db.ctx != nil {
+		tx, err = db.sqlDB.BeginTx(db.ctx, nil)
+	} else {
+		tx, err = db.sqlDB.Begin()
+	}
 	if err != nil {
 		return nil, err
 	}

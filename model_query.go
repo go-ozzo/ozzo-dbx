@@ -32,6 +32,7 @@ var (
 func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
 	q := &ModelQuery{
 		db:      db,
+		ctx:     db.ctx,
 		builder: builder,
 		model:   newStructValue(model, fieldMapFunc),
 	}
