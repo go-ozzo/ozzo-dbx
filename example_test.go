@@ -1,14 +1,12 @@
-package dbx_test
+package dbx
 
 import (
 	"fmt"
-
-	"github.com/go-ozzo/ozzo-dbx"
 )
 
 // This example shows how to populate DB data in different ways.
 func Example_dbQueries() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
 	// create a new query
 	q := db.NewQuery("SELECT id, name FROM users LIMIT 10")
@@ -26,7 +24,7 @@ func Example_dbQueries() {
 	q.One(&user)
 
 	// fetch a single row into a string map
-	data := dbx.NullStringMap{}
+	data := NullStringMap{}
 	q.One(data)
 
 	// fetch row by row
@@ -40,13 +38,13 @@ func Example_dbQueries() {
 
 // This example shows how to use query builder to build DB queries.
 func Example_queryBuilder() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
 	// build a SELECT query
 	//   SELECT `id`, `name` FROM `users` WHERE `name` LIKE '%Charles%' ORDER BY `id`
 	q := db.Select("id", "name").
 		From("users").
-		Where(dbx.Like("name", "Charles")).
+		Where(Like("name", "Charles")).
 		OrderBy("id")
 
 	// fetch all rows into a struct array
@@ -57,39 +55,39 @@ func Example_queryBuilder() {
 
 	// build an INSERT query
 	//   INSERT INTO `users` (name) VALUES ('James')
-	db.Insert("users", dbx.Params{
+	db.Insert("users", Params{
 		"name": "James",
 	}).Execute()
 }
 
 // This example shows how to use query builder in transactions.
 func Example_transactions() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
-	db.Transactional(func(tx *dbx.Tx) error {
-		_, err := tx.Insert("user", dbx.Params{
+	db.Transactional(func(tx *Tx) error {
+		_, err := tx.Insert("user", Params{
 			"name": "user1",
 		}).Execute()
 		if err != nil {
 			return err
 		}
-		_, err = tx.Insert("user", dbx.Params{
+		_, err = tx.Insert("user", Params{
 			"name": "user2",
 		}).Execute()
 		return err
 	})
 }
 
-type Customer struct {
+type TestCustomer struct {
 	ID   string
 	Name string
 }
 
 // This example shows how to do CRUD operations.
 func Example_crudOperations() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
-	var customer Customer
+	var customer TestCustomer
 
 	// read a customer: SELECT * FROM customer WHERE id=100
 	db.Select().Model(100, &customer)
@@ -105,18 +103,18 @@ func Example_crudOperations() {
 }
 
 func ExampleSchemaBuilder() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
-	db.Insert("users", dbx.Params{
+	db.Insert("users", Params{
 		"name": "James",
 		"age":  30,
 	}).Execute()
 }
 
 func ExampleRows_ScanMap() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
-	user := dbx.NullStringMap{}
+	user := NullStringMap{}
 
 	sql := "SELECT id, name FROM users LIMIT 10"
 	rows, _ := db.NewQuery(sql).Rows()
@@ -127,7 +125,7 @@ func ExampleRows_ScanMap() {
 }
 
 func ExampleRows_ScanStruct() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
 	var user struct {
 		ID, Name string
@@ -142,7 +140,7 @@ func ExampleRows_ScanStruct() {
 }
 
 func ExampleQuery_All() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
 
 	// fetches data into a slice of struct
@@ -152,7 +150,7 @@ func ExampleQuery_All() {
 	db.NewQuery(sql).All(&users)
 
 	// fetches data into a slice of NullStringMap
-	var users2 []dbx.NullStringMap
+	var users2 []NullStringMap
 	db.NewQuery(sql).All(&users2)
 	for _, user := range users2 {
 		fmt.Println(user["id"].String, user["name"].String)
@@ -160,7 +158,7 @@ func ExampleQuery_All() {
 }
 
 func ExampleQuery_One() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
 
 	// fetches data into a struct
@@ -170,13 +168,13 @@ func ExampleQuery_One() {
 	db.NewQuery(sql).One(&user)
 
 	// fetches data into a NullStringMap
-	var user2 dbx.NullStringMap
+	var user2 NullStringMap
 	db.NewQuery(sql).All(user2)
 	fmt.Println(user2["id"].String, user2["name"].String)
 }
 
 func ExampleQuery_Row() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
 
 	// fetches data into a struct
@@ -192,7 +190,7 @@ func ExampleQuery_Rows() {
 		ID, Name string
 	}
 
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
 
 	rows, _ := db.NewQuery(sql).Rows()
@@ -207,11 +205,11 @@ func ExampleQuery_Bind() {
 		ID, Name string
 	}
 
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users WHERE age>{:age} AND status={:status}"
 
 	q := db.NewQuery(sql)
-	q.Bind(dbx.Params{"age": 30, "status": 1}).One(&user)
+	q.Bind(Params{"age": 30, "status": 1}).One(&user)
 }
 
 func ExampleQuery_Prepare() {
@@ -219,19 +217,19 @@ func ExampleQuery_Prepare() {
 		ID, Name string
 	}
 
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users WHERE age>{:age} AND status={:status}"
 
 	q := db.NewQuery(sql).Prepare()
 	defer q.Close()
 
-	q.Bind(dbx.Params{"age": 30, "status": 1}).All(&users1)
-	q.Bind(dbx.Params{"age": 20, "status": 1}).All(&users2)
-	q.Bind(dbx.Params{"age": 10, "status": 1}).All(&users3)
+	q.Bind(Params{"age": 30, "status": 1}).All(&users1)
+	q.Bind(Params{"age": 20, "status": 1}).All(&users2)
+	q.Bind(Params{"age": 10, "status": 1}).All(&users3)
 }
 
 func ExampleDB() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
 	// queries data through a plain SQL
 	var users []struct {
@@ -240,36 +238,36 @@ func ExampleDB() {
 	db.NewQuery("SELECT id, name FROM users WHERE age=30").All(&users)
 
 	// queries data using query builder
-	db.Select("id", "name").From("users").Where(dbx.HashExp{"age": 30}).All(&users)
+	db.Select("id", "name").From("users").Where(HashExp{"age": 30}).All(&users)
 
 	// executes a plain SQL
-	db.NewQuery("INSERT INTO users (name) SET ({:name})").Bind(dbx.Params{"name": "James"}).Execute()
+	db.NewQuery("INSERT INTO users (name) SET ({:name})").Bind(Params{"name": "James"}).Execute()
 
 	// executes a SQL using query builder
-	db.Insert("users", dbx.Params{"name": "James"}).Execute()
+	db.Insert("users", Params{"name": "James"}).Execute()
 }
 
 func ExampleDB_Open() {
-	db, err := dbx.Open("mysql", "user:pass@/example")
+	db, err := Open("mysql", "user:pass@/example")
 	if err != nil {
 		panic(err)
 	}
 
-	var users []dbx.NullStringMap
+	var users []NullStringMap
 	if err := db.NewQuery("SELECT * FROM users LIMIT 10").All(&users); err != nil {
 		panic(err)
 	}
 }
 
 func ExampleDB_Begin() {
-	db, _ := dbx.Open("mysql", "user:pass@/example")
+	db, _ := Open("mysql", "user:pass@/example")
 
 	tx, _ := db.Begin()
 
-	_, err1 := tx.Insert("user", dbx.Params{
+	_, err1 := tx.Insert("user", Params{
 		"name": "user1",
 	}).Execute()
-	_, err2 := tx.Insert("user", dbx.Params{
+	_, err2 := tx.Insert("user", Params{
 		"name": "user2",
 	}).Execute()
 

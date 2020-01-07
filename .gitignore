@@ -1,4 +1,6 @@
+# Goland files
 .idea
+/*.iml
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
@@ -24,3 +26,7 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+# No vendoring
+/vendor
+

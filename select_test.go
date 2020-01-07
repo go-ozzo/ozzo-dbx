@@ -121,6 +121,24 @@ func TestSelectQuery_Model(t *testing.T) {
 	}
 
 	{
+		// All without specifying FROM using []*
+		var customers []*CustomerPtr
+		err := db.Select().OrderBy("id").All(&customers)
+		if assert.Nil(t, err) {
+			assert.Equal(t, 3, len(customers))
+		}
+	}
+
+	{
+		// All without specifying FROM using []**
+		var customers []**CustomerPtr
+		err := db.Select().OrderBy("id").All(&customers)
+		if assert.Nil(t, err) {
+			assert.Equal(t, 3, len(customers))
+		}
+	}
+
+	{
 		// Model without specifying FROM
 		var customer CustomerPtr
 		err := db.Select().Model(2, &customer)
