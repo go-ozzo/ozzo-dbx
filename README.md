@@ -490,6 +490,15 @@ If you want to use a different field as the primary key, tag it with `db:"pk"`. 
 for composite primary keys. Note that if you also want to explicitly specify the column name for a primary key field,
 you should use the tag format `db:"pk,col_name"`.
 
+You can give a common prefix or suffix to your table names by defining your own table name mapping via 
+`DB.TableMapFunc`. For example, the following code prefixes `tbl_` to all table names. 
+
+```go
+db.TableMapper = func(a interface{}) string {
+    return "tbl_" + GetTableName(a)
+}
+```
+
 ### Create
 
 To create (insert) a new row using a model, call the `ModelQuery.Insert()` method. For example,

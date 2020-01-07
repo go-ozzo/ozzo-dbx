@@ -48,6 +48,8 @@ type (
 
 		// FieldMapper maps struct fields to DB columns. Defaults to DefaultFieldMapFunc.
 		FieldMapper FieldMapFunc
+		// TableMapper maps structs to table names. Defaults to GetTableName.
+		TableMapper TableMapFunc
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
 		LogFunc LogFunc
 		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
@@ -85,6 +87,7 @@ func NewFromDB(sqlDB *sql.DB, driverName string) *DB {
 		driverName:  driverName,
 		sqlDB:       sqlDB,
 		FieldMapper: DefaultFieldMapFunc,
+		TableMapper: GetTableName,
 	}
 	db.Builder = db.newBuilder(db.sqlDB)
 	return db
@@ -121,6 +124,7 @@ func (db *DB) Clone() *DB {
 		driverName:   db.driverName,
 		sqlDB:        db.sqlDB,
 		FieldMapper:  db.FieldMapper,
+		TableMapper:  db.TableMapper,
 		PerfFunc:     db.PerfFunc,
 		LogFunc:      db.LogFunc,
 		QueryLogFunc: db.QueryLogFunc,

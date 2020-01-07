@@ -16,6 +16,9 @@ type (
 	// FieldMapFunc converts a struct field name into a DB column name.
 	FieldMapFunc func(string) string
 
+	// TableMapFunc converts a sample struct into a DB table name.
+	TableMapFunc func(a interface{}) string
+
 	structInfo struct {
 		nameMap   map[string]*fieldInfo // mapping from struct field names to field infos
 		dbNameMap map[string]*fieldInfo // mapping from db column names to field infos
@@ -77,16 +80,16 @@ func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 	return si
 }
 
-func newStructValue(model interface{}, mapper FieldMapFunc) *structValue {
+func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc TableMapFunc) *structValue {
 	value := reflect.ValueOf(model)
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() {
 		return nil
 	}
 
 	return &structValue{
-		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), mapper),
+		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), fieldMapFunc),
 		value:      value.Elem(),
-		tableName:  GetTableName(model),
+		tableName:  tableMapFunc(model),
 	}
 }
 
@@ -246,8 +249,9 @@ func indirect(v reflect.Value) reflect.Value {
 	return v
 }
 
-// GetTableName returns the table name corresponding to the given model struct or slice of structs.
-// Do not call this method in the model's TableName() method, or it will cause infinite loop.
+// GetTableName implements the default way of determining the table name corresponding to the given model struct
+// or slice of structs. To get the actual table name for a model, you should use DB.TableMapFunc() instead.
+// Do not call this method in a model's TableName() method because it will cause infinite loop.
 func GetTableName(a interface{}) string {
 	if tm, ok := a.(TableModel); ok {
 		v := reflect.ValueOf(a)

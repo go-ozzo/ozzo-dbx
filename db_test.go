@@ -359,3 +359,21 @@ func getPreparedDB() *DB {
 	}
 	return db
 }
+
+// Naming according to issue 49 ( https://github.com/go-ozzo/ozzo-dbx/issues/49 )
+
+type ArtistDAO struct {
+	nickname string
+}
+
+func (ArtistDAO) TableName() string {
+	return "artists"
+}
+
+func Test_TableNameWithPrefix(t *testing.T) {
+	db := NewFromDB(nil, "mysql")
+	db.TableMapper = func(a interface{}) string {
+		return "tbl_" + GetTableName(a)
+	}
+	assert.Equal(t, "tbl_artists", db.TableMapper(ArtistDAO{}))
+}
