@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type (
@@ -27,6 +28,16 @@ type (
 	// the SQL statement is executed or queried (usually SELECT statements).
 	PerfFunc func(ns int64, sql string, execute bool)
 
+	// QueryLogFunc is called each time when performing a SQL query.
+	// The "t" parameter gives the time that the SQL statement takes to execute,
+	// while rows and err are the result of the query.
+	QueryLogFunc func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error)
+
+	// ExecLogFunc is called each time when a SQL statement is executed.
+	// The "t" parameter gives the time that the SQL statement takes to execute,
+	// while result and err refer to the result of the execution.
+	ExecLogFunc func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error)
+
 	// BuilderFunc creates a Builder instance using the given DB instance and Executor.
 	BuilderFunc func(*DB, Executor) Builder
 
@@ -42,10 +53,16 @@ type (
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
 		LogFunc LogFunc
 		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
+		// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 		PerfFunc PerfFunc
+		// QueryLogFunc is called each time when performing a SQL query that returns data.
+		QueryLogFunc QueryLogFunc
+		// ExecLogFunc is called each time when a SQL statement is executed.
+		ExecLogFunc ExecLogFunc
 
 		sqlDB      *sql.DB
 		driverName string
+		ctx        context.Context
 	}
 
 	// Errors represents a list of errors.
@@ -104,15 +121,30 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 // Clone makes a shallow copy of DB.
 func (db *DB) Clone() *DB {
 	db2 := &DB{
-		driverName:  db.driverName,
-		sqlDB:       db.sqlDB,
-		FieldMapper: db.FieldMapper,
+		driverName:   db.driverName,
+		sqlDB:        db.sqlDB,
+		FieldMapper:  db.FieldMapper,
 		TableMapper: db.TableMapper,
-		PerfFunc:    db.PerfFunc,
-		LogFunc:     db.LogFunc,
+    PerfFunc:     db.PerfFunc,
+		LogFunc:      db.LogFunc,
+		QueryLogFunc: db.QueryLogFunc,
+		ExecLogFunc:  db.ExecLogFunc,
 	}
 	db2.Builder = db2.newBuilder(db.sqlDB)
 	return db2
+}
+
+// WithContext returns a new instance of DB associated with the given context.
+func (db *DB) WithContext(ctx context.Context) *DB {
+	db2 := db.Clone()
+	db2.ctx = ctx
+	return db2
+}
+
+// Context returns the context associated with the DB instance.
+// It returns nil if no context is associated.
+func (db *DB) Context() context.Context {
+	return db.ctx
 }
 
 // DB returns the sql.DB instance encapsulated by dbx.DB.
@@ -129,7 +161,13 @@ func (db *DB) Close() error {
 
 // Begin starts a transaction.
 func (db *DB) Begin() (*Tx, error) {
-	tx, err := db.sqlDB.Begin()
+	var tx *sql.Tx
+	var err error
+	if db.ctx != nil {
+		tx, err = db.sqlDB.BeginTx(db.ctx, nil)
+	} else {
+		tx, err = db.sqlDB.Begin()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -269,9 +307,9 @@ func (db *DB) processSQL(s string) (string, []string) {
 	})
 	s = quoteRegex.ReplaceAllStringFunc(s, func(m string) string {
 		if m[0] == '{' {
-			return db.QuoteTableName(m[2: len(m)-2])
+			return db.QuoteTableName(m[2 : len(m)-2])
 		}
-		return db.QuoteColumnName(m[2: len(m)-2])
+		return db.QuoteColumnName(m[2 : len(m)-2])
 	})
 	return s, placeholders
 }

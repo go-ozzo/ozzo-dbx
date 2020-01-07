@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"io/ioutil"
@@ -36,7 +37,13 @@ func TestDB_Open(t *testing.T) {
 		assert.NotNil(t, db.sqlDB)
 		assert.NotNil(t, db.FieldMapper)
 		db2 := db.Clone()
+		assert.NotEqual(t, db, db2)
 		assert.Equal(t, db.driverName, db2.driverName)
+		ctx := context.Background()
+		db3 := db.WithContext(ctx)
+		assert.Equal(t, ctx, db3.ctx)
+		assert.Equal(t, ctx, db3.Context())
+		assert.NotEqual(t, db, db3)
 	}
 
 	_, err = Open("xyz", TestDSN)
@@ -178,6 +185,13 @@ func TestDB_Begin(t *testing.T) {
 				return db.Wrap(sqlTx)
 			},
 			desc: "Wrap",
+		},
+		{
+			makeTx: func(db *DB) *Tx {
+				tx, _ := db.BeginTx(context.Background(), nil)
+				return tx
+			},
+			desc: "BeginTx",
 		},
 	}
 

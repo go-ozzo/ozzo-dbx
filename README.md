@@ -51,7 +51,7 @@ as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It h
 
 ## Requirements
 
-Go 1.8 or above.
+Go 1.13 or above.
 
 ## Installation
 
@@ -109,22 +109,22 @@ func main() {
 	var users []struct {
 		ID, Name string
 	}
-	q.All(&users)
+	err := q.All(&users)
 
 	// fetch a single row into a struct
 	var user struct {
 		ID, Name string
 	}
-	q.One(&user)
+	err = q.One(&user)
 
 	// fetch a single row into a string map
 	data := dbx.NullStringMap{}
-	q.One(data)
+	err = q.One(data)
 
 	// fetch row by row
 	rows2, _ := q.Rows()
 	for rows2.Next() {
-		rows2.ScanStruct(&user)
+		_ = rows2.ScanStruct(&user)
 		// rows.ScanMap(data)
 		// rows.Scan(&id, &name)
 	}
@@ -154,11 +154,11 @@ func main() {
 	var users []struct {
 		ID, Name string
 	}
-	q.All(&users)
+	err := q.All(&users)
 
 	// build an INSERT query
 	//   INSERT INTO `users` (`name`) VALUES ('James')
-	db.Insert("users", dbx.Params{
+	err = db.Insert("users", dbx.Params{
 		"name": "James",
 	}).Execute()
 }
@@ -241,7 +241,7 @@ err = q.Row(&id, &name)
 // populate data row by row
 rows, _ := q.Rows()
 for rows.Next() {
-	rows.ScanMap(&row)
+	_ = rows.ScanMap(&row)
 }
 ```
 
@@ -303,7 +303,7 @@ parameters. For example,
 ```go
 q := db.NewQuery("SELECT id, name FROM users WHERE id={:id}")
 q.Bind(dbx.Params{"id": 100})
-q.One(&user)
+err := q.One(&user)
 ```
 
 The above example will select the user record whose `id` is 100. The method `Query.Bind()` binds a set
@@ -318,10 +318,10 @@ q.Prepare()
 defer q.Close()
 
 q.Bind(dbx.Params{"id": 100})
-q.One(&user)
+err := q.One(&user)
 
 q.Bind(dbx.Params{"id": 200})
-q.One(&user)
+err = q.One(&user)
 
 // ...
 ```
@@ -334,7 +334,7 @@ can associate a context with a query and use the context to cancel the query whi
 
 ```go
 q := db.NewQuery("SELECT id, name FROM users")
-rows := q.WithContext(ctx).All()
+err := q.WithContext(ctx).All(&users)
 ```
 
 
@@ -351,7 +351,7 @@ the corresponding query building methods. For example,
 
 ```go
 db, _ := dbx.Open("mysql", "user:pass@/example")
-db.Select("id", "name").
+err := db.Select("id", "name").
 	From("users").
 	Where(dbx.HashExp{"id": 100}).
 	One(&user)
@@ -435,16 +435,16 @@ Such queries can be built by calling the corresponding methods of `DB`. For exam
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
 // INSERT INTO `users` (`name`, `email`) VALUES ({:p0}, {:p1})
-db.Insert("users", dbx.Params{
+err := db.Insert("users", dbx.Params{
 	"name": "James",
 	"email": "james@example.com",
 }).Execute()
 
 // UPDATE `users` SET `status`={:p0} WHERE `id`={:p1}
-db.Update("users", dbx.Params{"status": 1}, dbx.HashExp{"id": 100}).Execute()
+err = db.Update("users", dbx.Params{"status": 1}, dbx.HashExp{"id": 100}).Execute()
 
 // DELETE FROM `users` WHERE `status`={:p0}
-db.Delete("users", dbx.HashExp{"status": 2}).Execute()
+err = db.Delete("users", dbx.HashExp{"status": 2}).Execute()
 ```
 
 When building data manipulation queries, remember to call `Execute()` at the end to execute the queries.
@@ -462,7 +462,7 @@ q := db.CreateTable("users", map[string]string{
 	"id": "int primary key",
 	"name": "varchar(255)",
 })
-q.Execute()
+err := q.Execute()
 ```
 
 ## CRUD Operations
@@ -523,11 +523,11 @@ You can also exclude certain fields from being inserted by calling `Exclude()` b
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
 // insert only Name and Email fields
-db.Model(&customer).Insert("Name", "Email")
+err := db.Model(&customer).Insert("Name", "Email")
 // insert all public fields except Status
-db.Model(&customer).Exclude("Status").Insert()
+err = db.Model(&customer).Exclude("Status").Insert()
 // insert only Name
-db.Model(&customer).Exclude("Status").Insert("Name", "Status")
+err = db.Model(&customer).Exclude("Status").Insert("Name", "Status")
 ```
 
 ### Read
@@ -539,10 +539,10 @@ db, _ := dbx.Open("mysql", "user:pass@/example")
 
 var customer Customer
 // SELECT * FROM customer WHERE id=100
-db.Select().Model(100, &customer)
+err := db.Select().Model(100, &customer)
 
 // SELECT name, email FROM customer WHERE status=1 AND id=100
-db.Select("name", "email").Where(dbx.HashExp{"status": 1}).Model(100, &customer)
+err = db.Select("name", "email").Where(dbx.HashExp{"status": 1}).Model(100, &customer)
 ```
 
 Note that `SelectQuery.Model()` does not support composite primary keys. You should use `SelectQuery.One()` in this case.
@@ -554,7 +554,7 @@ db, _ := dbx.Open("mysql", "user:pass@/example")
 var orderItem OrderItem
 
 // SELECT * FROM order_item WHERE order_id=100 AND item_id=20
-db.Select().Where(dbx.HashExp{"order_id": 100, "item_id": 20}).One(&orderItem)
+err := db.Select().Where(dbx.HashExp{"order_id": 100, "item_id": 20}).One(&orderItem)
 ```
 
 In the above queries, we do not call `From()` to specify which table to select data from. This is because the select
@@ -576,11 +576,11 @@ be updated and which cannot in the same way as described for the `Insert()` meth
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
 // update all public fields of customer
-db.Model(&customer).Update()
+err := db.Model(&customer).Update()
 // update only Status
-db.Model(&customer).Update("Status")
+err = db.Model(&customer).Update("Status")
 // update all public fields except Status
-db.Model(&customer).Exclude("Status").Update()
+err = db.Model(&customer).Exclude("Status").Update()
 ```
 
 Note that the `Update()` method assumes that the primary keys are immutable. It uses the primary key value of the model
@@ -595,7 +595,7 @@ specified by the model. If the model does not have a primary key, an error will 
 ```go
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
-db.Model(&customer).Delete()
+err := db.Model(&customer).Delete()
 ```
 
 ### Null Handling
@@ -686,8 +686,14 @@ fmt.Println(err)
 
 ## Logging Executed SQL Statements
 
-When `DB.LogFunc` is configured with a compatible log function, all SQL statements being executed will be logged.
-The following example shows how to configure the logger using the standard `log` package:
+You can log and instrument DB queries by installing loggers with a DB connection. There are three kinds of loggers you
+can install:
+* `DB.LogFunc`: this is called each time when a SQL statement is queried or executed. The function signature is the
+  same as that of `fmt.Printf`, which makes it very easy to use. 
+* `DB.QueryLogFunc`: this is called each time when querying with a SQL statement.
+* `DB.ExecLogFunc`: this is called when executing a SQL statement.
+ 
+The following example shows how you can make use of these loggers.
 
 ```go
 import (
@@ -698,37 +704,20 @@ import (
 
 func main() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
+
+	// simple logging
 	db.LogFunc = log.Printf
 
+	// or you can use the following more flexible logging
+	db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
+		log.Printf("[%.2fms] Query SQL: %v", float64(t.Milliseconds()), sql))
+	}
+	db.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
+		log.Printf("[%.2fms] Execute SQL: %v", float64(t.Milliseconds()), sql))
+	}
 	// ...
 )
-```
-
-You can also configure `DB.PerfFunc` to capture the SQL statement execution times. Each time when a SQL statement
-is executed or queried, this function will be called with the time used. This allows you to profile your DB performance.
-
-The following example shows how to use the `ozzo-log` package which allows logging message severities and categories
-and sending logged messages to different targets (e.g. files, console window, network).
-
-```go
-import (
-	"fmt"
-	"github.com/go-ozzo/ozzo-dbx"
-	"github.com/go-ozzo/ozzo-log"
-	_ "github.com/go-sql-driver/mysql"
-)
-
-func main() {
-	logger := log.NewLogger()
-	logger.Targets = []log.Target{log.NewConsoleTarget()}
-	logger.Open()
-
-	db, _ := dbx.Open("mysql", "user:pass@/example")
-	db.LogFunc = logger.Info
-
-	// ...
-)
-```
+``` 
 
 ## Supporting New Databases
 

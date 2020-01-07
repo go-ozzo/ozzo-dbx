@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 )
@@ -19,6 +20,7 @@ type SelectQuery struct {
 	TableMapper TableMapFunc
 
 	builder Builder
+	ctx     context.Context
 
 	selects      []string
 	distinct     bool
@@ -60,9 +62,21 @@ func NewSelectQuery(builder Builder, db *DB) *SelectQuery {
 		union:       []UnionInfo{},
 		limit:       -1,
 		params:      Params{},
+		ctx:         db.ctx,
 		FieldMapper: db.FieldMapper,
 		TableMapper: db.TableMapper,
 	}
+}
+
+// Context returns the context associated with the query.
+func (q *SelectQuery) Context() context.Context {
+	return q.ctx
+}
+
+// WithContext associates a context with the query.
+func (q *SelectQuery) WithContext(ctx context.Context) *SelectQuery {
+	q.ctx = ctx
+	return q
 }
 
 // Select specifies the columns to be selected.
@@ -280,7 +294,7 @@ func (s *SelectQuery) One(a interface{}) error {
 			s.from = []string{tableName}
 		}
 	}
-	return s.Build().One(a)
+	return s.Build().WithContext(s.ctx).One(a)
 }
 
 // Model selects the row with the specified primary key and populates the model with the row data.
@@ -321,24 +335,24 @@ func (s *SelectQuery) All(slice interface{}) error {
 			s.from = []string{tableName}
 		}
 	}
-	return s.Build().All(slice)
+	return s.Build().WithContext(s.ctx).All(slice)
 }
 
 // Rows builds and executes the SELECT query and returns a Rows object for data retrieval purpose.
 // This is a shortcut to SelectQuery.Build().Rows()
 func (s *SelectQuery) Rows() (*Rows, error) {
-	return s.Build().Rows()
+	return s.Build().WithContext(s.ctx).Rows()
 }
 
 // Row builds and executes the SELECT query and populates the first row of the result into the specified variables.
 // This is a shortcut to SelectQuery.Build().Row()
 func (s *SelectQuery) Row(a ...interface{}) error {
-	return s.Build().Row(a...)
+	return s.Build().WithContext(s.ctx).Row(a...)
 }
 
 // Column builds and executes the SELECT statement and populates the first column of the result into a slice.
 // Note that the parameter must be a pointer to a slice.
 // This is a shortcut to SelectQuery.Build().Column()
 func (s *SelectQuery) Column(a interface{}) error {
-	return s.Build().Column(a)
+	return s.Build().WithContext(s.ctx).Column(a)
 }

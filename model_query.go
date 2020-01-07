@@ -32,6 +32,7 @@ var (
 func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
 	q := &ModelQuery{
 		db:      db,
+		ctx:     db.ctx,
 		builder: builder,
 		model:   newStructValue(model, fieldMapFunc, db.TableMapper),
 	}
@@ -40,7 +41,6 @@ func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder
 	}
 	return q
 }
-
 
 // Context returns the context associated with the query.
 func (q *ModelQuery) Context() context.Context {
