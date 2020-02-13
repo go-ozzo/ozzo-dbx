@@ -49,6 +49,8 @@ as well as DB-agnostic query building capabilities. ozzo-dbx is not an ORM. It h
 * Logging executed SQL statements
 * Supporting major relational databases
 
+For an example on how this library is used in an application, please refer to [go-rest-api](https://github.com/qiangxue/go-rest-api) which is a starter kit for building RESTful APIs in Go.
+
 ## Requirements
 
 Go 1.13 or above.
