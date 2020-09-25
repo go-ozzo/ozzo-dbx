@@ -105,7 +105,7 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 }
 
 func insertAndReturnPK(db *DB, query *Query, pkName string) (int64, error) {
-	if db.DriverName() != "postgres" {
+	if db.DriverName() != "postgres" && db.DriverName() != "pgx" {
 		result, err := query.Execute()
 		if err != nil {
 			return 0, err
