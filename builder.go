@@ -46,6 +46,10 @@ type Builder interface {
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
 	Insert(table string, cols Params) *Query
+	// Batch insert creates a Query that represents an INSERT SQL statement.
+	// The keys of cols are the column names, while the values of cols are the corresponding column
+	// values to be inserted.
+	BatchInsert(table string, rows []Params) *Query
 	// Upsert creates a Query that represents an UPSERT SQL statement.
 	// Upsert inserts a row into the table if the primary key or unique index is not found.
 	// Otherwise it will update the row with the new values.
@@ -196,6 +200,59 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 	}
 
 	return b.NewQuery(sql).Bind(params)
+}
+
+// Batch Insert creates a Query that represents an INSERT SQL statement.
+// The keys of cols are the column names, while the values of cols are the corresponding column
+// values to be inserted.
+func (b *BaseBuilder) BatchInsert(table string, rows []Params) *Query {
+	names := make([]string, 0)
+	for i, row := range rows {
+		if i == 0 {
+			for k, _ := range row {
+				names = append(names, k)
+			}
+		}
+		break
+	}
+	var sql string
+	var q *Query
+	if len(names) == 0 {
+		q = b.NewQuery(sql)
+		q.LastError = errors.New("Invalid rows.")
+	} else {
+		sort.Strings(names)
+
+		params := Params{}
+		columns := make([]string, 0, len(names))
+		values := make([]string, 0, len(names))
+		for i, row := range rows {
+			rowValues := make([]string, 0, len(names))
+			for _, name := range names {
+				if i == 0 {
+					columns = append(columns, b.db.QuoteColumnName(name))
+				}
+				value := row[name]
+				if e, ok := value.(Expression); ok {
+					rowValues = append(rowValues, e.Build(b.db, params))
+				} else {
+					rowValues = append(rowValues, fmt.Sprintf("{:p%v}", len(params)))
+					params[fmt.Sprintf("p%v", len(params))] = value
+				}
+			}
+			values = append(values, fmt.Sprintf("(%v)", strings.Join(rowValues, ", ")))
+		}
+
+		sql = fmt.Sprintf("INSERT INTO %v (%v) VALUES %v",
+			b.db.QuoteTableName(table),
+			strings.Join(columns, ", "),
+			strings.Join(values, ", "),
+		)
+
+		q = b.NewQuery(sql).Bind(params)
+	}
+
+	return q
 }
 
 // Upsert creates a Query that represents an UPSERT SQL statement.
