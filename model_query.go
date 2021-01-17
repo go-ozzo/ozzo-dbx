@@ -172,3 +172,27 @@ func (q *ModelQuery) Delete() error {
 	_, err := q.builder.Delete(q.model.tableName, HashExp(pk)).WithContext(q.ctx).Execute()
 	return err
 }
+
+// Upsert creates a Query that represents an UPSERT SQL statement.
+// Upsert inserts a row into the table if the primary key or unique index is not found.
+// Otherwise it will update the row with the new values.
+// The keys of cols are the column names, while the values of cols are the corresponding column
+// values to be inserted.
+func (q *ModelQuery) Upsert(attrs ...string) error {
+	if q.lastError != nil {
+		return q.lastError
+	}
+	pk := q.model.pk()
+	if len(pk) == 0 {
+		return MissingPKError
+	}
+	var pks []string
+
+	cols := q.model.columns(attrs, q.exclude)
+	for name := range pk {
+		cols[name] = pk[name]
+		pks = append(pks, name)
+	}
+	_, err := q.builder.Upsert(q.model.tableName, Params(cols), pks...).WithContext(q.ctx).Execute()
+	return err
+}

@@ -236,3 +236,105 @@ func TestModelQuery_Delete(t *testing.T) {
 	var a int
 	assert.NotNil(t, db.Model(&a).Delete())
 }
+
+func TestModelQuery_Upsert(t *testing.T) {
+	db := getPreparedDB()
+	defer db.Close()
+
+	id := 2
+	name := "test"
+	email := "test@example.com"
+	{
+		// updating normally
+		customer := Customer{
+			ID:    id,
+			Name:  name,
+			Email: email,
+		}
+		err := db.Model(&customer).Upsert()
+		if assert.Nil(t, err) {
+			var c Customer
+			db.Select().From("customer").Where(HashExp{"ID": id}).One(&c)
+			assert.Equal(t, name, c.Name)
+			assert.Equal(t, email, c.Email)
+			assert.Equal(t, 0, c.Status)
+		}
+	}
+
+	{
+		// updating without primary keys
+		item2 := Item{
+			Name: name,
+		}
+		err := db.Model(&item2).Upsert()
+		assert.Equal(t, MissingPKError, err)
+	}
+
+	{
+		// updating all fields
+		customer := CustomerPtr{
+			ID:    &id,
+			Name:  name,
+			Email: &email,
+		}
+		err := db.Model(&customer).Upsert()
+		if assert.Nil(t, err) {
+			assert.Equal(t, id, *customer.ID)
+			var c CustomerPtr
+			db.Select().From("customer").Where(HashExp{"ID": id}).One(&c)
+			assert.Equal(t, name, c.Name)
+			if assert.NotNil(t, c.Email) {
+				assert.Equal(t, email, *c.Email)
+			}
+			assert.Nil(t, c.Status)
+		}
+	}
+
+	{
+		// updating selected fields only
+		id = 3
+		customer := CustomerPtr{
+			ID:    &id,
+			Name:  name,
+			Email: &email,
+		}
+		err := db.Model(&customer).Upsert("Name", "Email")
+		if assert.Nil(t, err) {
+			assert.Equal(t, id, *customer.ID)
+			var c CustomerPtr
+			db.Select().From("customer").Where(HashExp{"ID": id}).One(&c)
+			assert.Equal(t, name, c.Name)
+			if assert.NotNil(t, c.Email) {
+				assert.Equal(t, email, *c.Email)
+			}
+			if assert.NotNil(t, c.Status) {
+				assert.Equal(t, 2, *c.Status)
+			}
+		}
+	}
+
+	{
+		// inserting normally
+		customer := Customer{
+			ID:    5,
+			Name:  name,
+			Email: email,
+		}
+		err := db.Model(&customer).Upsert()
+		if assert.Nil(t, err) {
+			assert.Equal(t, 5, customer.ID)
+			var c Customer
+			db.Select().From("customer").Where(HashExp{"ID": 5}).One(&c)
+			assert.Equal(t, name, c.Name)
+			assert.Equal(t, email, c.Email)
+			assert.Equal(t, 0, c.Status)
+			assert.False(t, c.Address.Valid)
+		}
+	}
+
+	{
+		// updating non-struct
+		var a int
+		assert.NotNil(t, db.Model(&a).Upsert())
+	}
+}
