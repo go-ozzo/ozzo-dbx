@@ -95,8 +95,9 @@ solve the problem. Please see the last section for more details.
 The following code snippet shows how you can use this package in order to access data from a MySQL database.
 
 ```go
+package main
+
 import (
-	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -136,8 +137,9 @@ func main() {
 And the following example shows how to use the query building capability of this package.
 
 ```go
+package main
+
 import (
-	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
 	_ "github.com/go-sql-driver/mysql"
 )
