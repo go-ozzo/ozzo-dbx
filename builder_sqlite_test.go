@@ -39,6 +39,12 @@ func TestSqliteBuilder_TruncateTable(t *testing.T) {
 	assert.Equal(t, q.SQL(), "DELETE FROM `users`", "t1")
 }
 
+func TestSqliteBuilder_RenameTable(t *testing.T) {
+	b := getSqliteBuilder()
+	q := b.RenameTable("usersOld", "usersNew")
+	assert.Equal(t, q.SQL(), "ALTER TABLE `usersOld` RENAME TO `usersNew`", "t1")
+}
+
 func TestSqliteBuilder_DropColumn(t *testing.T) {
 	b := getSqliteBuilder()
 	q := b.DropColumn("users", "age")
