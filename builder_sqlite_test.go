@@ -45,18 +45,6 @@ func TestSqliteBuilder_RenameTable(t *testing.T) {
 	assert.Equal(t, q.SQL(), "ALTER TABLE `usersOld` RENAME TO `usersNew`", "t1")
 }
 
-func TestSqliteBuilder_DropColumn(t *testing.T) {
-	b := getSqliteBuilder()
-	q := b.DropColumn("users", "age")
-	assert.NotEqual(t, q.LastError, nil, "t1")
-}
-
-func TestSqliteBuilder_RenameColumn(t *testing.T) {
-	b := getSqliteBuilder()
-	q := b.RenameColumn("users", "name", "username")
-	assert.NotEqual(t, q.LastError, nil, "t1")
-}
-
 func TestSqliteBuilder_AlterColumn(t *testing.T) {
 	b := getSqliteBuilder()
 	q := b.AlterColumn("users", "name", "int")
