@@ -121,6 +121,17 @@ func TestQuery_Rows(t *testing.T) {
 		assert.Equal(t, customers[2].Status, 2, "customers[2].Status")
 	}
 
+	// Query.All() with slice of pointers
+	var customersPtrSlice []*Customer
+	sql = `SELECT * FROM customer ORDER BY id`
+	err = db.NewQuery(sql).All(&customersPtrSlice)
+	if assert.Nil(t, err) {
+		assert.Equal(t, len(customersPtrSlice), 3, "len(customersPtrSlice)")
+		assert.Equal(t, customersPtrSlice[2].ID, 3, "customersPtrSlice[2].ID")
+		assert.Equal(t, customersPtrSlice[2].Email, `user3@example.com`, "customersPtrSlice[2].Email")
+		assert.Equal(t, customersPtrSlice[2].Status, 2, "customersPtrSlice[2].Status")
+	}
+
 	var customers2 []NullStringMap
 	err = db.NewQuery(sql).All(&customers2)
 	if assert.Nil(t, err) {
