@@ -124,6 +124,12 @@ func (r *Rows) all(slice interface{}) error {
 		return r.Close()
 	}
 
+	var isSliceOfPointers bool
+	if et.Kind() == reflect.Ptr {
+		isSliceOfPointers = true
+		et = et.Elem()
+	}
+
 	if et.Kind() != reflect.Struct {
 		return VarTypeError("must be a slice of struct or NullStringMap")
 	}
@@ -144,6 +150,11 @@ func (r *Rows) all(slice interface{}) error {
 		if err := r.Scan(refs...); err != nil {
 			return err
 		}
+
+		if isSliceOfPointers {
+			ev = ev.Addr()
+		}
+
 		v.Set(reflect.Append(v, ev))
 	}
 
