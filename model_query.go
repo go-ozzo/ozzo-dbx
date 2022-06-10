@@ -32,15 +32,15 @@ var (
 func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
 	q := &ModelQuery{
 		db:      db,
+		ctx:     db.ctx,
 		builder: builder,
-		model:   newStructValue(model, fieldMapFunc),
+		model:   newStructValue(model, fieldMapFunc, db.TableMapper),
 	}
 	if q.model == nil {
 		q.lastError = VarTypeError("must be a pointer to a struct representing the model")
 	}
 	return q
 }
-
 
 // Context returns the context associated with the query.
 func (q *ModelQuery) Context() context.Context {
@@ -105,7 +105,7 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 }
 
 func insertAndReturnPK(db *DB, query *Query, pkName string) (int64, error) {
-	if db.DriverName() != "postgres" {
+	if db.DriverName() != "postgres" && db.DriverName() != "pgx" {
 		result, err := query.Execute()
 		if err != nil {
 			return 0, err

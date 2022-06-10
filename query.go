@@ -51,7 +51,12 @@ type Query struct {
 	// LogFunc is used to log the SQL statement being executed.
 	LogFunc LogFunc
 	// PerfFunc is used to log the SQL execution time. It is ignored if nil.
+	// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 	PerfFunc PerfFunc
+	// QueryLogFunc is called each time when performing a SQL query that returns data.
+	QueryLogFunc QueryLogFunc
+	// ExecLogFunc is called each time when a SQL statement is executed.
+	ExecLogFunc ExecLogFunc
 }
 
 // NewQuery creates a new Query with the given SQL statement.
@@ -63,9 +68,12 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 		rawSQL:       rawSQL,
 		placeholders: placeholders,
 		params:       Params{},
+		ctx:          db.ctx,
 		FieldMapper:  db.FieldMapper,
 		LogFunc:      db.LogFunc,
 		PerfFunc:     db.PerfFunc,
+		QueryLogFunc: db.QueryLogFunc,
+		ExecLogFunc:  db.ExecLogFunc,
 	}
 }
 
@@ -106,25 +114,6 @@ func (q *Query) logSQL() string {
 		s = strings.Replace(s, "{:"+k+"}", sv, -1)
 	}
 	return s
-}
-
-// log logs a message for the currently executed SQL statement.
-func (q *Query) log(start time.Time, execute bool) {
-	if q.LogFunc == nil && q.PerfFunc == nil {
-		return
-	}
-	ns := time.Now().Sub(start).Nanoseconds()
-	s := q.logSQL()
-	if q.LogFunc != nil {
-		if execute {
-			q.LogFunc("[%.2fms] Execute SQL: %v", float64(ns)/1e6, s)
-		} else {
-			q.LogFunc("[%.2fms] Query SQL: %v", float64(ns)/1e6, s)
-		}
-	}
-	if q.PerfFunc != nil {
-		q.PerfFunc(ns, s, execute)
-	}
 }
 
 // Params returns the parameters to be bound to the SQL statement represented by this query.
@@ -183,7 +172,7 @@ func (q *Query) Execute() (result sql.Result, err error) {
 		return
 	}
 
-	defer q.log(time.Now(), true)
+	start := time.Now()
 
 	if q.ctx == nil {
 		if q.stmt == nil {
@@ -197,6 +186,16 @@ func (q *Query) Execute() (result sql.Result, err error) {
 		} else {
 			result, err = q.stmt.ExecContext(q.ctx, params...)
 		}
+	}
+
+	if q.ExecLogFunc != nil {
+		q.ExecLogFunc(q.ctx, time.Now().Sub(start), q.logSQL(), result, err)
+	}
+	if q.LogFunc != nil {
+		q.LogFunc("[%.2fms] Execute SQL: %v", float64(time.Now().Sub(start).Milliseconds()), q.logSQL())
+	}
+	if q.PerfFunc != nil {
+		q.PerfFunc(time.Now().Sub(start).Nanoseconds(), q.logSQL(), true)
 	}
 	return
 }
@@ -260,7 +259,7 @@ func (q *Query) Rows() (rows *Rows, err error) {
 		return
 	}
 
-	defer q.log(time.Now(), false)
+	start := time.Now()
 
 	var rr *sql.Rows
 	if q.ctx == nil {
@@ -277,6 +276,16 @@ func (q *Query) Rows() (rows *Rows, err error) {
 		}
 	}
 	rows = &Rows{rr, q.FieldMapper}
+
+	if q.QueryLogFunc != nil {
+		q.QueryLogFunc(q.ctx, time.Now().Sub(start), q.logSQL(), rr, err)
+	}
+	if q.LogFunc != nil {
+		q.LogFunc("[%.2fms] Query SQL: %v", float64(time.Now().Sub(start).Milliseconds()), q.logSQL())
+	}
+	if q.PerfFunc != nil {
+		q.PerfFunc(time.Now().Sub(start).Nanoseconds(), q.logSQL(), false)
+	}
 	return
 }
 
