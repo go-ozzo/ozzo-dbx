@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Builder supports building SQL statements in a DB-agnostic way.
@@ -46,10 +47,11 @@ type Builder interface {
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
 	Insert(table string, cols Params) *Query
-	// Batch insert creates a Query that represents an INSERT SQL statement.
-	// The keys of cols are the column names, while the values of cols are the corresponding column
-	// values to be inserted.
-	BatchInsert(table string, rows []Params) *Query
+	// BatchInsert By using the batchInsert method to create an SQL statement that
+	// inserts multiple records at once, the rows parameter is a param-based slice
+	// that uses the key value of the first record as a field. So make sure the
+	// fields of each record in rows are consistent
+	BatchInsert(table string, columns ColumnsWithDefaultValue, rows []Params) *Query
 	// Upsert creates a Query that represents an UPSERT SQL statement.
 	// Upsert inserts a row into the table if the primary key or unique index is not found.
 	// Otherwise it will update the row with the new values.
@@ -106,6 +108,28 @@ type Builder interface {
 	CreateUniqueIndex(table, name string, cols ...string) *Query
 	// DropIndex creates a Query that can be used to remove the named index from a table.
 	DropIndex(table, name string) *Query
+}
+
+type ColumnsWithDefaultValue = Params
+
+func (c ColumnsWithDefaultValue) DefaultValue(name string) interface{} {
+	if v, ok := c[name]; ok {
+		switch v.(type) {
+		case nil:
+			return nil
+		case bool:
+			if v == true {
+				return 1
+			} else {
+				return 0
+			}
+		case string, float32, float64, int, int8, int16, int32, int64, time.Time:
+			return v
+		default:
+			return ""
+		}
+	}
+	return ""
 }
 
 // BaseBuilder provides a basic implementation of the Builder interface.
@@ -202,57 +226,57 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 	return b.NewQuery(sql).Bind(params)
 }
 
-// Batch Insert creates a Query that represents an INSERT SQL statement.
-// The keys of cols are the column names, while the values of cols are the corresponding column
-// values to be inserted.
-func (b *BaseBuilder) BatchInsert(table string, rows []Params) *Query {
-	names := make([]string, 0)
-	for i, row := range rows {
-		if i == 0 {
-			for k, _ := range row {
-				names = append(names, k)
-			}
-		}
-		break
+// BatchInsert By using the batchInsert method to create an SQL statement that
+// inserts multiple records at once, the rows parameter is a param-based slice
+// that uses the key value of the first record as a field. So make sure the
+// fields of each record in rows are consistent
+func (b *BaseBuilder) BatchInsert(table string, columns ColumnsWithDefaultValue, rows []Params) *Query {
+	if len(rows) == 0 {
+		q := b.NewQuery("")
+		q.LastError = errors.New("rows is empty")
+		return q
 	}
-	var sql string
-	var q *Query
-	if len(names) == 0 {
-		q = b.NewQuery(sql)
-		q.LastError = errors.New("Invalid rows.")
-	} else {
-		sort.Strings(names)
 
-		params := Params{}
-		columns := make([]string, 0, len(names))
-		values := make([]string, 0, len(names))
-		for i, row := range rows {
-			rowValues := make([]string, 0, len(names))
-			for _, name := range names {
-				if i == 0 {
-					columns = append(columns, b.db.QuoteColumnName(name))
-				}
-				value := row[name]
+	names := make([]string, len(columns))
+	i := 0
+	for k, _ := range columns {
+		names[i] = k
+		i++
+	}
+	sort.Strings(names)
+
+	n := len(columns)
+	columnNames := make([]string, n)
+	for i, name := range names {
+		columnNames[i] = b.db.QuoteColumnName(name)
+	}
+
+	params := Params{}
+	values := make([]string, len(rows))
+	for i := range rows {
+		rowValues := make([]string, n)
+		for j, name := range names {
+			if value, ok := rows[i][name]; ok {
 				if e, ok := value.(Expression); ok {
-					rowValues = append(rowValues, e.Build(b.db, params))
+					rowValues[j] = e.Build(b.db, params)
 				} else {
-					rowValues = append(rowValues, fmt.Sprintf("{:p%v}", len(params)))
+					rowValues[j] = fmt.Sprintf("{:p%v}", len(params))
 					params[fmt.Sprintf("p%v", len(params))] = value
 				}
+			} else {
+				rowValues[j] = fmt.Sprintf("{:p%v}", len(params))
+				params[fmt.Sprintf("p%v", len(params))] = columns.DefaultValue(name)
 			}
-			values = append(values, fmt.Sprintf("(%v)", strings.Join(rowValues, ", ")))
 		}
-
-		sql = fmt.Sprintf("INSERT INTO %v (%v) VALUES %v",
-			b.db.QuoteTableName(table),
-			strings.Join(columns, ", "),
-			strings.Join(values, ", "),
-		)
-
-		q = b.NewQuery(sql).Bind(params)
+		values[i] = fmt.Sprintf("(%v)", strings.Join(rowValues, ", "))
 	}
 
-	return q
+	sql := fmt.Sprintf("INSERT INTO %v (%v) VALUES %v",
+		b.db.QuoteTableName(table),
+		strings.Join(columnNames, ", "),
+		strings.Join(values, ", "),
+	)
+	return b.NewQuery(sql).Bind(params)
 }
 
 // Upsert creates a Query that represents an UPSERT SQL statement.

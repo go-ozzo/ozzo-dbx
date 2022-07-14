@@ -6,6 +6,7 @@ package dbx
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -39,6 +40,33 @@ func TestMysqlBuilder_Upsert(t *testing.T) {
 	assert.Equal(t, q.Params()["p1"], "James", "t3")
 	assert.Equal(t, q.Params()["p2"], 30, "t2")
 	assert.Equal(t, q.Params()["p3"], "James", "t3")
+}
+
+func TestMysqlBuilder_BatchInsert(t *testing.T) {
+	getPreparedDB()
+	defaultTime, _ := time.Parse("2006-01-02", "2022-07-01")
+	b := getMysqlBuilder()
+	q := b.BatchInsert("users", ColumnsWithDefaultValue{
+		"age":           20,
+		"name":          nil,
+		"join_datetime": defaultTime,
+	}, []Params{
+		{
+			"age": 10,
+		},
+		{
+			"name":      "James",
+			"bad_field": "bad value",
+		},
+	})
+	assert.Equal(t, q.SQL(), "INSERT INTO `users` (`age`, `join_datetime`, `name`) VALUES ({:p0}, {:p1}, {:p2}), ({:p3}, {:p4}, {:p5})", "t1")
+	assert.Equal(t, q.Params()["p0"], 10, "t0-age")
+	assert.Equal(t, q.Params()["p1"], defaultTime, "t0-join-datetime")
+	assert.Equal(t, q.Params()["p2"], nil, "t0-name")
+
+	assert.Equal(t, q.Params()["p3"], 20, "t1-age")
+	assert.Equal(t, q.Params()["p4"], defaultTime, "t1-join-datetime")
+	assert.Equal(t, q.Params()["p5"], "James", "t1-name")
 }
 
 func TestMysqlBuilder_RenameColumn(t *testing.T) {
