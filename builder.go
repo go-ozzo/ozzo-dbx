@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Builder supports building SQL statements in a DB-agnostic way.
@@ -46,6 +47,11 @@ type Builder interface {
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
 	Insert(table string, cols Params) *Query
+	// BatchInsert By using the batchInsert method to create an SQL statement that
+	// inserts multiple records at once, the columns parameter is a param-based
+	// slice, the key is the field name, the value is the default value, and
+	// rows is the data you need to insert
+	BatchInsert(table string, columns ColumnsWithDefaultValue, rows []Params) *Query
 	// Upsert creates a Query that represents an UPSERT SQL statement.
 	// Upsert inserts a row into the table if the primary key or unique index is not found.
 	// Otherwise it will update the row with the new values.
@@ -102,6 +108,28 @@ type Builder interface {
 	CreateUniqueIndex(table, name string, cols ...string) *Query
 	// DropIndex creates a Query that can be used to remove the named index from a table.
 	DropIndex(table, name string) *Query
+}
+
+type ColumnsWithDefaultValue = Params
+
+func (c ColumnsWithDefaultValue) DefaultValue(name string) interface{} {
+	if v, ok := c[name]; ok {
+		switch v.(type) {
+		case nil:
+			return nil
+		case bool:
+			if v == true {
+				return 1
+			} else {
+				return 0
+			}
+		case string, float32, float64, int, int8, int16, int32, int64, time.Time:
+			return v
+		default:
+			return ""
+		}
+	}
+	return ""
 }
 
 // BaseBuilder provides a basic implementation of the Builder interface.
@@ -195,6 +223,59 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 		)
 	}
 
+	return b.NewQuery(sql).Bind(params)
+}
+
+// BatchInsert By using the batchInsert method to create an SQL statement that
+// inserts multiple records at once, the columns parameter is a param-based
+// slice, the key is the field name, the value is the default value, and
+// rows is the data you need to insert
+func (b *BaseBuilder) BatchInsert(table string, columns ColumnsWithDefaultValue, rows []Params) *Query {
+	if len(rows) == 0 {
+		q := b.NewQuery("")
+		q.LastError = errors.New("rows is empty")
+		return q
+	}
+
+	names := make([]string, len(columns))
+	i := 0
+	for k, _ := range columns {
+		names[i] = k
+		i++
+	}
+	sort.Strings(names)
+
+	n := len(columns)
+	columnNames := make([]string, n)
+	for i, name := range names {
+		columnNames[i] = b.db.QuoteColumnName(name)
+	}
+
+	params := Params{}
+	values := make([]string, len(rows))
+	for i := range rows {
+		rowValues := make([]string, n)
+		for j, name := range names {
+			if value, ok := rows[i][name]; ok {
+				if e, ok := value.(Expression); ok {
+					rowValues[j] = e.Build(b.db, params)
+				} else {
+					rowValues[j] = fmt.Sprintf("{:p%v}", len(params))
+					params[fmt.Sprintf("p%v", len(params))] = value
+				}
+			} else {
+				rowValues[j] = fmt.Sprintf("{:p%v}", len(params))
+				params[fmt.Sprintf("p%v", len(params))] = columns.DefaultValue(name)
+			}
+		}
+		values[i] = fmt.Sprintf("(%v)", strings.Join(rowValues, ", "))
+	}
+
+	sql := fmt.Sprintf("INSERT INTO %v (%v) VALUES %v",
+		b.db.QuoteTableName(table),
+		strings.Join(columnNames, ", "),
+		strings.Join(values, ", "),
+	)
 	return b.NewQuery(sql).Bind(params)
 }
 
