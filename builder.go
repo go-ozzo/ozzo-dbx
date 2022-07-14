@@ -48,9 +48,9 @@ type Builder interface {
 	// values to be inserted.
 	Insert(table string, cols Params) *Query
 	// BatchInsert By using the batchInsert method to create an SQL statement that
-	// inserts multiple records at once, the rows parameter is a param-based slice
-	// that uses the key value of the first record as a field. So make sure the
-	// fields of each record in rows are consistent
+	// inserts multiple records at once, the columns parameter is a param-based
+	// slice, the key is the field name, the value is the default value, and
+	// rows is the data you need to insert
 	BatchInsert(table string, columns ColumnsWithDefaultValue, rows []Params) *Query
 	// Upsert creates a Query that represents an UPSERT SQL statement.
 	// Upsert inserts a row into the table if the primary key or unique index is not found.
@@ -227,9 +227,9 @@ func (b *BaseBuilder) Insert(table string, cols Params) *Query {
 }
 
 // BatchInsert By using the batchInsert method to create an SQL statement that
-// inserts multiple records at once, the rows parameter is a param-based slice
-// that uses the key value of the first record as a field. So make sure the
-// fields of each record in rows are consistent
+// inserts multiple records at once, the columns parameter is a param-based
+// slice, the key is the field name, the value is the default value, and
+// rows is the data you need to insert
 func (b *BaseBuilder) BatchInsert(table string, columns ColumnsWithDefaultValue, rows []Params) *Query {
 	if len(rows) == 0 {
 		q := b.NewQuery("")
