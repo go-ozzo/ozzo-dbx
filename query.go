@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -57,6 +58,8 @@ type Query struct {
 	QueryLogFunc QueryLogFunc
 	// ExecLogFunc is called each time when a SQL statement is executed.
 	ExecLogFunc ExecLogFunc
+	// LogSQLFunc is called once for each call to ExecLogFunc(), QueryLogFunc(), LogFunc(), & PerfFunc()
+	LogSQLFunc LogSQLFunc
 }
 
 // NewQuery creates a new Query with the given SQL statement.
@@ -74,6 +77,7 @@ func NewQuery(db *DB, executor Executor, sql string) *Query {
 		PerfFunc:     db.PerfFunc,
 		QueryLogFunc: db.QueryLogFunc,
 		ExecLogFunc:  db.ExecLogFunc,
+		LogSQLFunc:   db.LogSQLFunc,
 	}
 }
 
@@ -95,9 +99,18 @@ func (q *Query) WithContext(ctx context.Context) *Query {
 	return q
 }
 
-// logSQL returns the SQL statement with parameters being replaced with the actual values.
-// The result is only for logging purpose and should not be used to execute.
 func (q *Query) logSQL() string {
+
+	if q.LogSQLFunc != nil {
+		return q.LogSQLFunc(q)
+	}
+
+	return DefaultLogSQLFunc(q)
+}
+
+// DefaultLogSQLFunc() returns the SQL statement for the given query with parameters being replaced with the actual values.
+// It is called once for each call to ExecLogFunc, QueryLogFunc, LogFunc, & PerfFunc.
+func DefaultLogSQLFunc(q *Query) string {
 	s := q.sql
 	for k, v := range q.params {
 		if valuer, ok := v.(driver.Valuer); ok && valuer != nil {
@@ -108,6 +121,28 @@ func (q *Query) logSQL() string {
 			sv = "'" + strings.Replace(str, "'", "''", -1) + "'"
 		} else if bs, ok := v.([]byte); ok {
 			sv = "'" + strings.Replace(string(bs), "'", "''", -1) + "'"
+		} else {
+			sv = fmt.Sprintf("%v", v)
+		}
+		s = strings.Replace(s, "{:"+k+"}", sv, -1)
+	}
+	return s
+}
+
+// Bin2HexLogSQLFunc() returns the SQL statement for the given query with parameters being replaced with the actual values.
+// It differs from DefaultLogSQLFunc() only in the respect that it prints []byte values in hexadecimal.
+// It is called once for each call to ExecLogFunc, QueryLogFunc, LogFunc, & PerfFunc.
+func Bin2HexLogSQLFunc(q *Query) string {
+	s := q.sql
+	for k, v := range q.params {
+		if valuer, ok := v.(driver.Valuer); ok && valuer != nil {
+			v, _ = valuer.Value()
+		}
+		var sv string
+		if str, ok := v.(string); ok {
+			sv = "'" + strings.Replace(str, "'", "''", -1) + "'"
+		} else if bs, ok := v.([]byte); ok {
+			sv = "0x" + hex.EncodeToString(bs)
 		} else {
 			sv = fmt.Sprintf("%v", v)
 		}
