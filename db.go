@@ -38,6 +38,11 @@ type (
 	// while result and err refer to the result of the execution.
 	ExecLogFunc func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error)
 
+	// LogSQLFunc returns the SQL statement for the given query with parameters being replaced with the actual values.
+	// It is called once for each call to ExecLogFunc(), QueryLogFunc(), LogFunc(), & PerfFunc()
+	// The result is only for logging purpose and should not be used to execute.
+	LogSQLFunc func(q *Query) string
+
 	// BuilderFunc creates a Builder instance using the given DB instance and Executor.
 	BuilderFunc func(*DB, Executor) Builder
 
@@ -59,6 +64,11 @@ type (
 		QueryLogFunc QueryLogFunc
 		// ExecLogFunc is called each time when a SQL statement is executed.
 		ExecLogFunc ExecLogFunc
+		// LogSQLFunc returns the SQL statement for the given query with parameters being replaced with the actual values.
+		// It is called once for each call to ExecLogFunc(), QueryLogFunc(), LogFunc(), & PerfFunc()
+		// The result is only for logging purpose and should not be used to execute.
+		// DefaultLogSQLFunc() is used when this is left nil.
+		LogSQLFunc LogSQLFunc
 
 		sqlDB      *sql.DB
 		driverName string
