@@ -73,8 +73,17 @@ func (b *MysqlBuilder) Upsert(table string, cols Params, constraints ...string) 
 
 	names := []string{}
 	for name := range cols {
-		names = append(names, name)
+		found := false
+		for _, pkName := range constraints {
+			if pkName == name {
+				found = true
+			}
+		}
+		if !found {
+			names = append(names, name)
+		}
 	}
+
 	sort.Strings(names)
 
 	lines := []string{}
@@ -91,7 +100,7 @@ func (b *MysqlBuilder) Upsert(table string, cols Params, constraints ...string) 
 
 	q.sql += " ON DUPLICATE KEY UPDATE " + strings.Join(lines, ", ")
 
-	return q
+	return b.NewQuery(q.sql).Bind(q.params)
 }
 
 var mysqlColumnRegexp = regexp.MustCompile("(?m)^\\s*[`\"](.*?)[`\"]\\s+(.*?),?$")

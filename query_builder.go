@@ -29,6 +29,8 @@ type QueryBuilder interface {
 	BuildOrderByAndLimit(string, []string, int64, int64) string
 	// BuildUnion generates a UNION clause from the given union information.
 	BuildUnion([]UnionInfo, Params) string
+	// BuildFor generates a FOR UPDATE clause from the given expression
+	BuildFor(option string) string
 }
 
 // BaseQueryBuilder provides a basic implementation of QueryBuilder.
@@ -232,6 +234,16 @@ func (q *BaseQueryBuilder) BuildLimit(limit int64, offset int64) string {
 		sql += " "
 	}
 	return sql + fmt.Sprintf("OFFSET %v", offset)
+}
+
+func (q *BaseQueryBuilder) BuildFor(option string) string {
+	s := ""
+	if option != "" {
+		s += option
+	} else {
+		s += "UPDATE "
+	}
+	return "FOR " + s
 }
 
 func (q *BaseQueryBuilder) quoteTableNameAndAlias(table string) string {
