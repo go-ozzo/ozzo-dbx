@@ -63,7 +63,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		// inserting with null-typed fields
 		customer := CustomerNull{
 			Name:  name,
-			Email: sql.NullString{email, true},
+			Email: sql.NullString{String: email, Valid: true},
 		}
 		err := db.Model(&customer).Insert()
 		if assert.Nil(t, err) {
@@ -87,7 +87,7 @@ func TestModelQuery_Insert(t *testing.T) {
 			Email: &email,
 			InnerCustomer: InnerCustomer{
 				Name:   &name,
-				Status: sql.NullInt64{1, true},
+				Status: sql.NullInt64{Int64: 1, Valid: true},
 			},
 		}
 		err := db.Model(&customer).Insert()
