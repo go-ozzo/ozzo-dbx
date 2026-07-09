@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"errors"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -16,10 +17,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	TestDSN     = "travis:@/ozzo_dbx_test?parseTime=true"
+var (
+	TestDSN     = getTestDSN()
 	FixtureFile = "testdata/mysql.sql"
 )
+
+func getTestDSN() string {
+	if dsn := os.Getenv("DBX_MYSQL_DSN"); dsn != "" {
+		return dsn
+	}
+	return "travis:@/ozzo_dbx_test?parseTime=true"
+}
 
 func TestDB_NewFromDB(t *testing.T) {
 	sqlDB, err := sql.Open("mysql", TestDSN)
