@@ -74,6 +74,7 @@ type (
 // If a DB driver is not listed here, the StandardBuilder will be used.
 var BuilderFuncMap = map[string]BuilderFunc{
 	"sqlite3":  NewSqliteBuilder,
+	"sqlite":   NewSqliteBuilder,
 	"mysql":    NewMysqlBuilder,
 	"postgres": NewPgsqlBuilder,
 	"pgx":      NewPgsqlBuilder,
