@@ -1,8 +1,8 @@
 # ozzo-dbx
 
+[![CI](https://github.com/go-ozzo/ozzo-dbx/actions/workflows/ci.yml/badge.svg)](https://github.com/go-ozzo/ozzo-dbx/actions)
+[![codecov](https://codecov.io/gh/go-ozzo/ozzo-dbx/branch/master/graph/badge.svg)](https://codecov.io/gh/go-ozzo/ozzo-dbx)
 [![GoDoc](https://godoc.org/github.com/go-ozzo/ozzo-dbx?status.png)](http://godoc.org/github.com/go-ozzo/ozzo-dbx)
-[![Build Status](https://travis-ci.org/go-ozzo/ozzo-dbx.svg?branch=master)](https://travis-ci.org/go-ozzo/ozzo-dbx)
-[![Coverage Status](https://coveralls.io/repos/github/go-ozzo/ozzo-dbx/badge.svg?branch=master)](https://coveralls.io/github/go-ozzo/ozzo-dbx?branch=master)
 [![Go Report](https://goreportcard.com/badge/github.com/go-ozzo/ozzo-dbx)](https://goreportcard.com/report/github.com/go-ozzo/ozzo-dbx)
 
 ## Summary
@@ -53,7 +53,7 @@ For an example on how this library is used in an application, please refer to [g
 
 ## Requirements
 
-Go 1.13 or above.
+Go 1.21 or above.
 
 ## Installation
 
@@ -81,11 +81,13 @@ import _ "github.com/go-sql-driver/mysql"
 
 The following databases are fully supported out of box:
 
-* SQLite
+* SQLite (driver key `"sqlite3"` for [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) or `"sqlite"` for [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) -- the CGo-free driver)
 * MySQL
 * PostgreSQL
 * MS SQL Server (2012 or above)
 * Oracle
+
+SQLite schema operations `DropColumn`, `RenameColumn`, and `RenameTable` are supported via standard `ALTER TABLE` syntax (requires SQLite 3.25.0+ for rename, 3.35.0+ for drop column).
 
 For other databases, the query building feature may not work as expected. You can create a custom builder to
 solve the problem. Please see the last section for more details.
@@ -193,7 +195,7 @@ result, err := q.Execute()
 If the SQL statement does retrieve data (e.g. a SELECT statement), one of the following methods should be called, 
 which will execute the query and populate the result into the specified variable(s).
 
-* `Query.All()`: populate all rows of the result into a slice of structs or `NullString` maps.
+* `Query.All()`: populate all rows of the result into a slice of structs or `NullString` maps. Pointer slices (`[]*Struct`) are also supported.
 * `Query.One()`: populate the first row of the result into a struct or a `NullString` map.
 * `Query.Column()`: populate the first column of the result into a slice.
 * `Query.Row()`: populate the first row of the result into a list of variables, one for each returning column.

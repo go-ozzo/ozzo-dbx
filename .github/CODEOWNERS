@@ -1,0 +1,20 @@
+# CODEOWNERS for go-ozzo/ozzo-dbx
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @kolkov
+
+# Query builder
+builder*.go @kolkov
+
+# Core
+db.go @kolkov
+query.go @kolkov
+rows.go @kolkov
+struct.go @kolkov
+
+# CI/CD
+.github/ @kolkov
+
+# Documentation
+*.md @kolkov

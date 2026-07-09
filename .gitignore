@@ -24,3 +24,12 @@ _testmain.go
 *.exe
 *.test
 *.prof
+.DS_Store
+
+# AI settings
+.claude/
+.goco/
+
+# Dev docs (private)
+docs/dev/
+tmp/
