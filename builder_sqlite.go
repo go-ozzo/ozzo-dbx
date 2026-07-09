@@ -74,18 +74,10 @@ func (b *SqliteBuilder) TruncateTable(table string) *Query {
 	return b.NewQuery(sql)
 }
 
-// DropColumn creates a Query that can be used to drop a column from a table.
-func (b *SqliteBuilder) DropColumn(table, col string) *Query {
-	q := b.NewQuery("")
-	q.LastError = errors.New("SQLite does not support dropping columns")
-	return q
-}
-
-// RenameColumn creates a Query that can be used to rename a column in a table.
-func (b *SqliteBuilder) RenameColumn(table, oldName, newName string) *Query {
-	q := b.NewQuery("")
-	q.LastError = errors.New("SQLite does not support renaming columns")
-	return q
+// RenameTable creates a Query that can be used to rename a table.
+func (b *SqliteBuilder) RenameTable(oldName, newName string) *Query {
+	sql := fmt.Sprintf("ALTER TABLE %v RENAME TO %v", b.db.QuoteTableName(oldName), b.db.QuoteTableName(newName))
+	return b.NewQuery(sql)
 }
 
 // AlterColumn creates a Query that can be used to change the definition of a table column.

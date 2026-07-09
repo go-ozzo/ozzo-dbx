@@ -42,13 +42,19 @@ func TestSqliteBuilder_TruncateTable(t *testing.T) {
 func TestSqliteBuilder_DropColumn(t *testing.T) {
 	b := getSqliteBuilder()
 	q := b.DropColumn("users", "age")
-	assert.NotEqual(t, q.LastError, nil, "t1")
+	assert.Equal(t, q.SQL(), "ALTER TABLE `users` DROP COLUMN `age`", "t1")
 }
 
 func TestSqliteBuilder_RenameColumn(t *testing.T) {
 	b := getSqliteBuilder()
 	q := b.RenameColumn("users", "name", "username")
-	assert.NotEqual(t, q.LastError, nil, "t1")
+	assert.Equal(t, q.SQL(), "ALTER TABLE `users` RENAME COLUMN `name` TO `username`", "t1")
+}
+
+func TestSqliteBuilder_RenameTable(t *testing.T) {
+	b := getSqliteBuilder()
+	q := b.RenameTable("users", "people")
+	assert.Equal(t, q.SQL(), "ALTER TABLE `users` RENAME TO `people`", "t1")
 }
 
 func TestSqliteBuilder_AlterColumn(t *testing.T) {
