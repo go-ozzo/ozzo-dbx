@@ -152,3 +152,48 @@ type FA struct {
 type FB struct {
 	B1 string
 }
+
+func TestStructInfo(t *testing.T) {
+
+	mExpect := map[string]string{
+		"address": "Address", "email": "Email", "id": "ID", "name": "Name", "status": "Status",
+	}
+
+	var c Customer
+	si, err := GetStructInfo(&c, DefaultFieldMapFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// pk
+	sPK := si.PrimaryKeyFieldNames()
+	assert.Equal(t, []string{"ID"}, sPK)
+
+	// by db column name
+	const tcname = "email"
+	fi := si.GetFieldInfoByColumnName(tcname)
+	if fi == nil {
+		t.Fatalf(`GetFieldInfoByColumnName(%s) == nil`, tcname)
+	}
+	assert.Equal(t, mExpect[tcname], fi.FieldName())
+
+	// by struct field name
+	const tfname = "Email"
+	fi = si.GetFieldInfoByFieldName(tfname)
+	if fi == nil {
+		t.Fatalf(`GetFieldInfoByFieldName(%s) == nil`, tfname)
+	}
+	assert.Equal(t, tcname, fi.ColumnName())
+
+	// all field mappings
+	for _, fi := range si.GetFieldInfo() {
+		fldname := fi.FieldName()
+		colname := fi.ColumnName()
+		v, ok := mExpect[colname]
+		if ok {
+			assert.Equal(t, v, fldname)
+		} else {
+			t.Fatalf(`unexpected ColumnName() "%s"`, colname)
+		}
+	}
+}

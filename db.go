@@ -59,6 +59,9 @@ type (
 		QueryLogFunc QueryLogFunc
 		// ExecLogFunc is called each time when a SQL statement is executed.
 		ExecLogFunc ExecLogFunc
+		// LogBinaryFormatter controls how []byte values are formatted when logging is
+		// enabled.  Falls back to strconv.Quote() when nil.
+		LogBinaryFormatter func([]byte) string
 
 		sqlDB      *sql.DB
 		driverName string
@@ -122,14 +125,15 @@ func MustOpen(driverName, dsn string) (*DB, error) {
 // Clone makes a shallow copy of DB.
 func (db *DB) Clone() *DB {
 	db2 := &DB{
-		driverName:   db.driverName,
-		sqlDB:        db.sqlDB,
-		FieldMapper:  db.FieldMapper,
-		TableMapper:  db.TableMapper,
-		PerfFunc:     db.PerfFunc,
-		LogFunc:      db.LogFunc,
-		QueryLogFunc: db.QueryLogFunc,
-		ExecLogFunc:  db.ExecLogFunc,
+		driverName:         db.driverName,
+		sqlDB:              db.sqlDB,
+		FieldMapper:        db.FieldMapper,
+		TableMapper:        db.TableMapper,
+		PerfFunc:           db.PerfFunc,
+		LogFunc:            db.LogFunc,
+		QueryLogFunc:       db.QueryLogFunc,
+		ExecLogFunc:        db.ExecLogFunc,
+		LogBinaryFormatter: db.LogBinaryFormatter,
 	}
 	db2.Builder = db2.newBuilder(db.sqlDB)
 	return db2

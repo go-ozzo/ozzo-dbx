@@ -19,19 +19,19 @@ type (
 	// TableMapFunc converts a sample struct into a DB table name.
 	TableMapFunc func(a interface{}) string
 
-	structInfo struct {
-		nameMap   map[string]*fieldInfo // mapping from struct field names to field infos
-		dbNameMap map[string]*fieldInfo // mapping from db column names to field infos
+	StructInfo struct {
+		nameMap   map[string]*FieldInfo // mapping from struct field names to field infos
+		dbNameMap map[string]*FieldInfo // mapping from db column names to field infos
 		pkNames   []string              // struct field names representing PKs
 	}
 
 	structValue struct {
-		*structInfo
+		*StructInfo
 		value     reflect.Value // the struct value
 		tableName string        // the db table name for the struct
 	}
 
-	fieldInfo struct {
+	FieldInfo struct {
 		name   string // field name
 		dbName string // db column name
 		path   []int  // index path to the struct field reflection
@@ -49,7 +49,7 @@ var (
 
 	fieldRegex      = regexp.MustCompile(`([^A-Z_])([A-Z])`)
 	scannerType     = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
-	structInfoMap   = make(map[structInfoMapKey]*structInfo)
+	structInfoMap   = make(map[structInfoMapKey]*StructInfo)
 	muStructInfoMap sync.Mutex
 )
 
@@ -61,7 +61,7 @@ func DefaultFieldMapFunc(f string) string {
 	return strings.ToLower(fieldRegex.ReplaceAllString(f, "${1}_$2"))
 }
 
-func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
+func getStructInfo(a reflect.Type, mapper FieldMapFunc) *StructInfo {
 	muStructInfoMap.Lock()
 	defer muStructInfoMap.Unlock()
 
@@ -70,14 +70,26 @@ func getStructInfo(a reflect.Type, mapper FieldMapFunc) *structInfo {
 		return si
 	}
 
-	si := &structInfo{
-		nameMap:   map[string]*fieldInfo{},
-		dbNameMap: map[string]*fieldInfo{},
+	si := &StructInfo{
+		nameMap:   map[string]*FieldInfo{},
+		dbNameMap: map[string]*FieldInfo{},
 	}
 	si.build(a, make([]int, 0), "", "", mapper)
 	structInfoMap[key] = si
 
 	return si
+}
+
+// GetStructInfo returns field mapping information for a given model struct & field mapper.
+func GetStructInfo(modelStruct interface{}, mapper FieldMapFunc) (*StructInfo, error) {
+	t := reflect.TypeOf(modelStruct)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil, VarTypeError("must be a pointer to a struct")
+	}
+	return getStructInfo(t, mapper), nil
 }
 
 func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc TableMapFunc) *structValue {
@@ -87,7 +99,7 @@ func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc T
 	}
 
 	return &structValue{
-		structInfo: getStructInfo(reflect.TypeOf(model).Elem(), fieldMapFunc),
+		StructInfo: getStructInfo(reflect.TypeOf(model).Elem(), fieldMapFunc),
 		value:      value.Elem(),
 		tableName:  tableMapFunc(model),
 	}
@@ -125,8 +137,18 @@ func (s *structValue) columns(include, exclude []string) map[string]interface{} 
 	return v
 }
 
+// FieldName returns the struct field name of the field.
+func (fi *FieldInfo) FieldName() string {
+	return fi.name
+}
+
+// ColumnName returns the database table column name of the field.
+func (fi *FieldInfo) ColumnName() string {
+	return fi.dbName
+}
+
 // getValue returns the field value for the given struct value.
-func (fi *fieldInfo) getValue(a reflect.Value) interface{} {
+func (fi *FieldInfo) getValue(a reflect.Value) interface{} {
 	for _, i := range fi.path {
 		a = a.Field(i)
 		if a.Kind() == reflect.Ptr {
@@ -140,7 +162,7 @@ func (fi *fieldInfo) getValue(a reflect.Value) interface{} {
 }
 
 // getField returns the reflection value of the field for the given struct value.
-func (fi *fieldInfo) getField(a reflect.Value) reflect.Value {
+func (fi *FieldInfo) getField(a reflect.Value) reflect.Value {
 	i := 0
 	for ; i < len(fi.path)-1; i++ {
 		a = indirect(a.Field(fi.path[i]))
@@ -148,7 +170,45 @@ func (fi *fieldInfo) getField(a reflect.Value) reflect.Value {
 	return a.Field(fi.path[i])
 }
 
-func (si *structInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix string, mapper FieldMapFunc) {
+// PrimaryKeyFieldNames returns the struct field names of the primary key(s) in the struct.
+func (si *StructInfo) PrimaryKeyFieldNames() []string {
+	if si != nil && len(si.pkNames) > 0 {
+		ret := make([]string, len(si.pkNames))
+		copy(ret, si.pkNames)
+		return ret
+	}
+	return nil
+}
+
+// GetFieldInfo returns field information for all mapped fields in the struct.
+func (si *StructInfo) GetFieldInfo() []*FieldInfo {
+	if si != nil && len(si.nameMap) > 0 {
+		ret := make([]*FieldInfo, 0, len(si.nameMap))
+		for _, v := range si.nameMap {
+			ret = append(ret, v)
+		}
+		return ret
+	}
+	return nil
+}
+
+// GetFieldInfoByFieldName retrieves FieldInfo by struct field name.
+func (si *StructInfo) GetFieldInfoByFieldName(structFieldName string) *FieldInfo {
+	if si != nil && si.nameMap != nil {
+		return si.nameMap[structFieldName]
+	}
+	return nil
+}
+
+// GetFieldInfoByColumnName retrieves FieldInfo by database table column name.
+func (si *StructInfo) GetFieldInfoByColumnName(dbColumnName string) *FieldInfo {
+	if si != nil && si.dbNameMap != nil {
+		return si.dbNameMap[dbColumnName]
+	}
+	return nil
+}
+
+func (si *StructInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix string, mapper FieldMapFunc) {
 	n := a.NumField()
 	for i := 0; i < n; i++ {
 		field := a.Field(i)
@@ -186,7 +246,7 @@ func (si *structInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix
 			si.build(ft, path2, concat(namePrefix, name), concat(dbNamePrefix, dbName), mapper)
 		} else if dbName != "" {
 			// non-anonymous scanner or struct field
-			fi := &fieldInfo{
+			fi := &FieldInfo{
 				name:   concat(namePrefix, name),
 				dbName: concat(dbNamePrefix, dbName),
 				path:   path2,

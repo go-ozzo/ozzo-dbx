@@ -10,6 +10,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -57,23 +58,27 @@ type Query struct {
 	QueryLogFunc QueryLogFunc
 	// ExecLogFunc is called each time when a SQL statement is executed.
 	ExecLogFunc ExecLogFunc
+	// LogBinaryFormatter controls how []byte values are formatted when logging is
+	// enabled.  Falls back to strconv.Quote() when nil.
+	LogBinaryFormatter func([]byte) string
 }
 
 // NewQuery creates a new Query with the given SQL statement.
 func NewQuery(db *DB, executor Executor, sql string) *Query {
 	rawSQL, placeholders := db.processSQL(sql)
 	return &Query{
-		executor:     executor,
-		sql:          sql,
-		rawSQL:       rawSQL,
-		placeholders: placeholders,
-		params:       Params{},
-		ctx:          db.ctx,
-		FieldMapper:  db.FieldMapper,
-		LogFunc:      db.LogFunc,
-		PerfFunc:     db.PerfFunc,
-		QueryLogFunc: db.QueryLogFunc,
-		ExecLogFunc:  db.ExecLogFunc,
+		executor:           executor,
+		sql:                sql,
+		rawSQL:             rawSQL,
+		placeholders:       placeholders,
+		params:             Params{},
+		ctx:                db.ctx,
+		FieldMapper:        db.FieldMapper,
+		LogFunc:            db.LogFunc,
+		PerfFunc:           db.PerfFunc,
+		QueryLogFunc:       db.QueryLogFunc,
+		ExecLogFunc:        db.ExecLogFunc,
+		LogBinaryFormatter: db.LogBinaryFormatter,
 	}
 }
 
@@ -105,9 +110,13 @@ func (q *Query) logSQL() string {
 		}
 		var sv string
 		if str, ok := v.(string); ok {
-			sv = "'" + strings.Replace(str, "'", "''", -1) + "'"
+			sv = strconv.Quote(str)
 		} else if bs, ok := v.([]byte); ok {
-			sv = "'" + strings.Replace(string(bs), "'", "''", -1) + "'"
+			if q.LogBinaryFormatter != nil {
+				sv = q.LogBinaryFormatter(bs)
+			} else {
+				sv = strconv.Quote(string(bs))
+			}
 		} else {
 			sv = fmt.Sprintf("%v", v)
 		}

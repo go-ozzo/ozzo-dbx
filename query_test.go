@@ -301,7 +301,7 @@ func TestQuery_Rows(t *testing.T) {
 func TestQuery_logSQL(t *testing.T) {
 	db := getDB()
 	q := db.NewQuery("SELECT * FROM users WHERE type={:type} AND id={:id}").Bind(Params{"type": "a", "id": 1})
-	expected := "SELECT * FROM users WHERE type='a' AND id=1"
+	expected := "SELECT * FROM users WHERE type=\"a\" AND id=1"
 	assert.Equal(t, q.logSQL(), expected, "logSQL()")
 }
 
