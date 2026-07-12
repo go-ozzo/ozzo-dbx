@@ -27,6 +27,7 @@
 	- [Удаление (Delete)](#удаление-delete)
 	- [Работа с NULL](#работа-с-null)
 - [Экранирование имён таблиц и столбцов](#экранирование-имён-таблиц-и-столбцов)
+- [Отменяемые запросы](#отменяемые-запросы)
 - [Использование транзакций](#использование-транзакций)
 - [Логирование выполненных SQL-запросов](#логирование-выполненных-sql-запросов)
 - [Поддержка новых баз данных](#поддержка-новых-баз-данных)
@@ -96,6 +97,8 @@ import _ "github.com/go-sql-driver/mysql"
 Приведённый ниже код демонстрирует использование пакета для доступа к данным базы MySQL.
 
 ```go
+package main
+
 import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
@@ -137,6 +140,8 @@ func main() {
 Следующий пример показывает, как использовать возможности построителя запросов.
 
 ```go
+package main
+
 import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
@@ -702,10 +707,16 @@ fmt.Println(err)
 Следующий пример демонстрирует использование логгеров:
 
 ```go
+package main
+
 import (
-	"fmt"
+	"context"
+	"database/sql"
 	"log"
+	"time"
+
 	"github.com/go-ozzo/ozzo-dbx"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -716,13 +727,13 @@ func main() {
 
 	// или более гибкое логирование
 	db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
-		log.Printf("[%.2fms] Query SQL: %v", float64(t.Milliseconds()), sql))
+		log.Printf("[%.2fms] Query SQL: %v", float64(t.Milliseconds()), sql)
 	}
 	db.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
-		log.Printf("[%.2fms] Execute SQL: %v", float64(t.Milliseconds()), sql))
+		log.Printf("[%.2fms] Execute SQL: %v", float64(t.Milliseconds()), sql)
 	}
 	// ...
-)
+}
 ``` 
 
 ## Поддержка новых баз данных
