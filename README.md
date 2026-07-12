@@ -27,6 +27,7 @@
 	- [Delete](#delete)
 	- [Null Handling](#null-handling)
 - [Quoting Table and Column Names](#quoting-table-and-column-names)
+- [Cancelable Queries](#cancelable-queries)
 - [Using Transactions](#using-transactions)
 - [Logging Executed SQL Statements](#logging-executed-sql-statements)
 - [Supporting New Databases](#supporting-new-databases)
@@ -97,6 +98,8 @@ solve the problem. Please see the last section for more details.
 The following code snippet shows how you can use this package in order to access data from a MySQL database.
 
 ```go
+package main
+
 import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
@@ -138,6 +141,8 @@ func main() {
 And the following example shows how to use the query building capability of this package.
 
 ```go
+package main
+
 import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-dbx"
@@ -618,7 +623,7 @@ database value is null.
 
 Another option to represent a database null is to use `sql.NullXyz` types. For example, if a string column is nullable,
 you may use `sql.NullString`. The `NullString.Valid` field indicates whether the value is a null or not, and 
-`NullString.String` returns the string value when it is not null. Because `sql.NulLXyz` types do not handle JSON 
+`NullString.String` returns the string value when it is not null. Because `sql.NullXyz` types do not handle JSON 
 marshalling, you may use the [null package](https://github.com/guregu/null), instead. 
 
 Below is an example of handling nulls:
@@ -709,10 +714,16 @@ can install:
 The following example shows how you can make use of these loggers.
 
 ```go
+package main
+
 import (
-	"fmt"
+	"context"
+	"database/sql"
 	"log"
+	"time"
+
 	"github.com/go-ozzo/ozzo-dbx"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -723,13 +734,13 @@ func main() {
 
 	// or you can use the following more flexible logging
 	db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
-		log.Printf("[%.2fms] Query SQL: %v", float64(t.Milliseconds()), sql))
+		log.Printf("[%.2fms] Query SQL: %v", float64(t.Milliseconds()), sql)
 	}
 	db.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
-		log.Printf("[%.2fms] Execute SQL: %v", float64(t.Milliseconds()), sql))
+		log.Printf("[%.2fms] Execute SQL: %v", float64(t.Milliseconds()), sql)
 	}
 	// ...
-)
+}
 ``` 
 
 ## Supporting New Databases
