@@ -752,3 +752,13 @@ allows you to add support for new databases. The effort of adding support for a 
   via composition.
 * Create a struct that implements the `Builder` interface. You may extend `BaseBuilder` via composition.
 * Write an `init()` function to register the new builder in `dbx.BuilderFuncMap`.
+
+## Star History
+
+<a href="https://starhistory.io">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.starhistory.io/png?repos=go-ozzo/ozzo-dbx&style=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.starhistory.io/png?repos=go-ozzo/ozzo-dbx&style=professional" />
+   <img alt="Star History Chart" src="https://api.starhistory.io/png?repos=go-ozzo/ozzo-dbx" width="800" />
+ </picture>
+</a>
