@@ -4,7 +4,7 @@ Thank you for your interest in contributing to ozzo-dbx! This document covers ho
 
 ## Prerequisites
 
-- **Go 1.21+** ([download](https://go.dev/dl/))
+- **Go 1.22+** ([download](https://go.dev/dl/))
 - **MySQL 8.0+** for integration tests (or use unit tests only)
 
 ## Building
@@ -15,22 +15,33 @@ go build ./...
 
 ## Running Tests
 
-```bash
-# Unit tests (no database required)
-go test -run "TestBuilderFuncMap|TestSqliteBuilder|TestStandardBuilder|TestDefaultFieldMapFunc" ./...
+The project has two test suites:
 
-# Full tests (requires MySQL)
-export DBX_MYSQL_DSN="root:pass@tcp(127.0.0.1:3306)/ozzo_dbx_test?parseTime=true"
+```bash
+# Unit tests (no database required — runs from root)
 go test -race ./...
+
+# Integration tests (requires MySQL — runs from integration/)
+export DBX_MYSQL_DSN="root:pass@tcp(127.0.0.1:3306)/ozzo_dbx_test?parseTime=true"
+cd integration && go test -race ./...
 ```
+
+Unit tests cover SQL generation, quoting, struct mapping, and internal logic. Integration tests cover actual database operations (queries, transactions, CRUD).
 
 ## Code Style
 
-- Run `go fmt ./...` before every commit. CI enforces this.
+- Run `gofmt -w .` and `golangci-lint run --timeout=5m` before every commit. CI enforces both.
 - Run `go vet ./...` and fix all issues.
 - Follow standard Go naming conventions (`ID`, `URL`, `HTTP` are uppercase).
 - Handle every error or explicitly ignore with `_ =` and a comment explaining why.
 - Exported types and functions must have doc comments.
+
+## Where to Put Tests
+
+- **Unit tests** (no database needed): `*_test.go` in the root directory, `package dbx`
+- **Integration tests** (need MySQL): `integration/*_test.go`, `package dbx_test`
+
+If your test only checks SQL output or struct mapping, it belongs in the root. If it executes queries against a real database, it belongs in `integration/`.
 
 ## Pull Request Workflow
 
@@ -41,10 +52,11 @@ go test -race ./...
 2. Make your changes. Keep commits focused and well-described.
 3. Verify locally:
    ```bash
-   go fmt ./...
    go build ./...
    go vet ./...
-   go test -run "TestBuilderFuncMap|TestSqliteBuilder|TestStandardBuilder" ./...
+   gofmt -w . && gofmt -l .
+   golangci-lint run --timeout=5m
+   go test -race ./...
    ```
 4. Push and open a pull request against `master`.
 5. Wait for CI to pass. All checks must be green before merge.

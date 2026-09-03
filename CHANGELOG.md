@@ -25,15 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Minimum Go version: 1.13 → 1.22** (Go 1.21 or older is no longer supported)
-- `go-sql-driver/mysql` v1.4.1 → v1.9.3
+- **Removed `go-sql-driver/mysql` from main `go.mod`** — integration tests moved to `integration/` subdirectory with its own module. Consumers no longer pull MySQL driver or `filippo.io/edwards25519` into their dependency graph
 - `stretchr/testify` v1.4.0 → v1.12.1
 - Removed `google.golang.org/appengine` indirect dependency
-- `ioutil.ReadFile` → `os.ReadFile` (deprecated since Go 1.16)
-- `reflect.PtrTo` → `reflect.PointerTo`
-- `strings.Replace(..., -1)` → `strings.ReplaceAll`
-- `time.Now().Sub(start)` → `time.Since(start)`
+- Modernized stdlib usage: `os.ReadFile`, `strings.ReplaceAll`, `time.Since`, `reflect.PointerTo`
 - Test DSN configurable via `DBX_MYSQL_DSN` environment variable (replaces hardcoded Travis CI credentials)
-- CI: `actions/setup-go@v7`, `golangci-lint-action@v9`
+- CI: split into unit tests (no DB) and integration tests (MySQL 8.0), `actions/setup-go@v7`, `golangci-lint-action@v9`
 
 ## [1.5.0] - 2018-12-17
 
