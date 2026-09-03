@@ -170,7 +170,7 @@ func TestResolveColumn_StripTablePrefix(t *testing.T) {
 
 func TestResolveColumn_CustomFieldMapper(t *testing.T) {
 	type Product struct {
-		ID        int    `db:"pk,id"`
+		ID        int `db:"pk,id"`
 		LongName  string
 		ShortDesc string
 	}
