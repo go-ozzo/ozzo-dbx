@@ -11,6 +11,6 @@ require (
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.1.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 )
