@@ -1,16 +1,12 @@
-package dbx
+package dbx_test
 
 import (
 	"database/sql"
 	"testing"
 
+	dbx "github.com/go-ozzo/ozzo-dbx"
 	"github.com/stretchr/testify/assert"
 )
-
-type Item struct {
-	ID2  int
-	Name string
-}
 
 func TestModelQuery_Insert(t *testing.T) {
 	db := getPreparedDB()
@@ -29,7 +25,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 4, customer.ID)
 			var c Customer
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": 4}).One(&c))
 			assert.Equal(t, name, c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
@@ -47,7 +43,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) && assert.NotNil(t, customer.ID) {
 			assert.Equal(t, 5, *customer.ID)
 			var c CustomerPtr
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": 4}).One(&c))
 			assert.Equal(t, name, c.Name)
 			if assert.NotNil(t, c.Email) {
 				assert.Equal(t, email, *c.Email)
@@ -67,10 +63,8 @@ func TestModelQuery_Insert(t *testing.T) {
 		}
 		err := db.Model(&customer).Insert()
 		if assert.Nil(t, err) {
-			// potential todo: need to check if the field implements sql.Scanner
-			// assert.Equal(t, int64(6), customer.ID.Int64)
 			var c CustomerNull
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": 4}).One(&c))
 			assert.Equal(t, name, c.Name)
 			assert.Equal(t, email, c.Email.String)
 			if assert.NotNil(t, c.Status) {
@@ -94,7 +88,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 100, customer.Id)
 			var c CustomerEmbedded
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 100}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": 100}).One(&c))
 			assert.Equal(t, name, *c.Name)
 			assert.Equal(t, email, *c.Email)
 			if assert.NotNil(t, c.Status) {
@@ -115,7 +109,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 101, customer.ID)
 			var c Customer
-			db.Select().From("customer").Where(HashExp{"ID": 101}).One(&c) //nolint:errcheck // NULL name → string scan error expected
+			db.Select().From("customer").Where(dbx.HashExp{"ID": 101}).One(&c) //nolint:errcheck // NULL name -> string scan error expected
 			assert.Equal(t, "", c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
@@ -144,7 +138,7 @@ func TestModelQuery_Update(t *testing.T) {
 		err := db.Model(&customer).Update()
 		if assert.Nil(t, err) {
 			var c Customer
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": id}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": id}).One(&c))
 			assert.Equal(t, name, c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
@@ -157,7 +151,7 @@ func TestModelQuery_Update(t *testing.T) {
 			Name: name,
 		}
 		err := db.Model(&item2).Update()
-		assert.Equal(t, MissingPKError, err)
+		assert.Equal(t, dbx.MissingPKError, err)
 	}
 
 	{
@@ -171,7 +165,7 @@ func TestModelQuery_Update(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, id, *customer.ID)
 			var c CustomerPtr
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": id}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": id}).One(&c))
 			assert.Equal(t, name, c.Name)
 			if assert.NotNil(t, c.Email) {
 				assert.Equal(t, email, *c.Email)
@@ -192,7 +186,7 @@ func TestModelQuery_Update(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, id, *customer.ID)
 			var c CustomerPtr
-			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": id}).One(&c))
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"ID": id}).One(&c))
 			assert.Equal(t, name, c.Name)
 			if assert.NotNil(t, c.Email) {
 				assert.Equal(t, email, *c.Email)
@@ -220,7 +214,7 @@ func TestModelQuery_Delete(t *testing.T) {
 	err := db.Model(&customer).Delete()
 	if assert.Nil(t, err) {
 		var m Customer
-		err := db.Select().From("customer").Where(HashExp{"ID": 2}).One(&m)
+		err := db.Select().From("customer").Where(dbx.HashExp{"ID": 2}).One(&m)
 		assert.NotNil(t, err)
 	}
 
@@ -230,7 +224,7 @@ func TestModelQuery_Delete(t *testing.T) {
 			Name: "",
 		}
 		err := db.Model(&item2).Delete()
-		assert.Equal(t, MissingPKError, err)
+		assert.Equal(t, dbx.MissingPKError, err)
 	}
 
 	var a int

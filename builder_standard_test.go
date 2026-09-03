@@ -176,8 +176,8 @@ func TestStandardBuilder_DropIndex(t *testing.T) {
 }
 
 func getStandardBuilder() Builder {
-	db := getDB()
-	b := NewStandardBuilder(db, db.sqlDB)
+	db := NewFromDB(nil, "mysql")
+	b := NewStandardBuilder(db, nil)
 	db.Builder = b
 	return b
 }

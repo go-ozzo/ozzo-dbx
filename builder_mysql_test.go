@@ -28,7 +28,6 @@ func TestMysqlBuilder_QuoteSimpleColumnName(t *testing.T) {
 }
 
 func TestMysqlBuilder_Upsert(t *testing.T) {
-	getPreparedDB()
 	b := getMysqlBuilder()
 	q := b.Upsert("users", Params{
 		"name": "James",
@@ -39,14 +38,6 @@ func TestMysqlBuilder_Upsert(t *testing.T) {
 	assert.Equal(t, q.Params()["p1"], "James", "t3")
 	assert.Equal(t, q.Params()["p2"], 30, "t2")
 	assert.Equal(t, q.Params()["p3"], "James", "t3")
-}
-
-func TestMysqlBuilder_RenameColumn(t *testing.T) {
-	b := getMysqlBuilder()
-	q := b.RenameColumn("users", "name", "username")
-	assert.Equal(t, q.SQL(), "ALTER TABLE `users` CHANGE `name` `username`")
-	q = b.RenameColumn("customer", "email", "e")
-	assert.Equal(t, q.SQL(), "ALTER TABLE `customer` CHANGE `email` `e` varchar(128) NOT NULL")
 }
 
 func TestMysqlBuilder_DropPrimaryKey(t *testing.T) {
@@ -62,8 +53,8 @@ func TestMysqlBuilder_DropForeignKey(t *testing.T) {
 }
 
 func getMysqlBuilder() Builder {
-	db := getDB()
-	b := NewMysqlBuilder(db, db.sqlDB)
+	db := NewFromDB(nil, "mysql")
+	b := NewMysqlBuilder(db, nil)
 	db.Builder = b
 	return b
 }

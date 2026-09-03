@@ -88,8 +88,8 @@ func TestSqliteBuilder_DropForeignKey(t *testing.T) {
 }
 
 func getSqliteBuilder() Builder {
-	db := getDB()
-	b := NewSqliteBuilder(db, db.sqlDB)
+	db := NewFromDB(nil, "sqlite3")
+	b := NewSqliteBuilder(db, nil)
 	db.Builder = b
 	return b
 }

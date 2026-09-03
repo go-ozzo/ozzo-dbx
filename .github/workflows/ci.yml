@@ -11,8 +11,34 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    name: Test - Go ${{ matrix.go-version }}
+  test-unit:
+    name: Unit Tests - Go ${{ matrix.go-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.22', '1.23']
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Test
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Upload coverage to Codecov
+        if: matrix.go-version == '1.23'
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: ./coverage.txt
+          flags: unit
+          name: codecov-ozzo-dbx-unit
+
+  test-integration:
+    name: Integration Tests - Go ${{ matrix.go-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -47,18 +73,19 @@ jobs:
           done
 
       - name: Test
+        working-directory: integration
         env:
           DBX_MYSQL_DSN: "root:@tcp(127.0.0.1:3306)/ozzo_dbx_test?parseTime=true"
-        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=github.com/go-ozzo/ozzo-dbx ./...
 
       - name: Upload coverage to Codecov
         if: matrix.go-version == '1.23'
         uses: codecov/codecov-action@v7
         with:
           use_oidc: true
-          files: ./coverage.txt
-          flags: unittests
-          name: codecov-ozzo-dbx
+          files: ./integration/coverage.txt
+          flags: integration
+          name: codecov-ozzo-dbx-integration
 
   lint:
     name: Lint

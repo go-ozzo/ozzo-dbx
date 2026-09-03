@@ -5,75 +5,11 @@
 package dbx
 
 import (
-	"context"
-	"database/sql"
 	"errors"
-	"os"
-	"strings"
 	"testing"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 )
-
-var (
-	TestDSN     = getTestDSN()
-	FixtureFile = "testdata/mysql.sql"
-)
-
-func getTestDSN() string {
-	if dsn := os.Getenv("DBX_MYSQL_DSN"); dsn != "" {
-		return dsn
-	}
-	return "travis:@/ozzo_dbx_test?parseTime=true"
-}
-
-func TestDB_NewFromDB(t *testing.T) {
-	sqlDB, err := sql.Open("mysql", TestDSN)
-	if assert.Nil(t, err) {
-		db := NewFromDB(sqlDB, "mysql")
-		assert.NotNil(t, db.sqlDB)
-		assert.NotNil(t, db.FieldMapper)
-	}
-}
-
-func TestDB_Open(t *testing.T) {
-	db, err := Open("mysql", TestDSN)
-	assert.Nil(t, err)
-	if assert.NotNil(t, db) {
-		assert.NotNil(t, db.sqlDB)
-		assert.NotNil(t, db.FieldMapper)
-		db2 := db.Clone()
-		assert.NotEqual(t, db, db2)
-		assert.Equal(t, db.driverName, db2.driverName)
-		ctx := context.Background()
-		db3 := db.WithContext(ctx)
-		assert.Equal(t, ctx, db3.ctx)
-		assert.Equal(t, ctx, db3.Context())
-		assert.NotEqual(t, db, db3)
-	}
-
-	_, err = Open("xyz", TestDSN)
-	assert.NotNil(t, err)
-}
-
-func TestDB_MustOpen(t *testing.T) {
-	_, err := MustOpen("mysql", TestDSN)
-	assert.Nil(t, err)
-
-	_, err = MustOpen("mysql", "unknown:x@/test")
-	assert.NotNil(t, err)
-}
-
-func TestDB_Close(t *testing.T) {
-	db := getDB()
-	assert.Nil(t, db.Close())
-}
-
-func TestDB_DriverName(t *testing.T) {
-	db := getDB()
-	assert.Equal(t, "mysql", db.DriverName())
-}
 
 func TestDB_QuoteTableName(t *testing.T) {
 	tests := []struct {
@@ -85,7 +21,7 @@ func TestDB_QuoteTableName(t *testing.T) {
 		{"{{users}}", "{{users}}"},
 		{"public.db1.users", "`public`.`db1`.`users`"},
 	}
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 	for _, test := range tests {
 		result := db.QuoteTableName(test.input)
 		assert.Equal(t, test.output, result, test.input)
@@ -105,7 +41,7 @@ func TestDB_QuoteColumnName(t *testing.T) {
 		{"[[name]]", "[[name]]"},
 		{"public.db1.users", "`public`.`db1`.`users`"},
 	}
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 	for _, test := range tests {
 		result := db.QuoteColumnName(test.input)
 		assert.Equal(t, test.output, result, test.input)
@@ -155,11 +91,11 @@ func TestDB_ProcessSQL(t *testing.T) {
 		},
 	}
 
-	mysqlDB := getDB()
+	mysqlDB := NewFromDB(nil, "mysql")
 	mysqlDB.Builder = NewMysqlBuilder(nil, nil)
-	pgsqlDB := getDB()
+	pgsqlDB := NewFromDB(nil, "postgres")
 	pgsqlDB.Builder = NewPgsqlBuilder(nil, nil)
-	ociDB := getDB()
+	ociDB := NewFromDB(nil, "oci8")
 	ociDB.Builder = NewOciBuilder(nil, nil)
 
 	for _, test := range tests {
@@ -174,165 +110,6 @@ func TestDB_ProcessSQL(t *testing.T) {
 	}
 }
 
-func TestDB_Begin(t *testing.T) {
-	tests := []struct {
-		makeTx func(db *DB) *Tx
-		desc   string
-	}{
-		{
-			makeTx: func(db *DB) *Tx {
-				tx, _ := db.Begin()
-				return tx
-			},
-			desc: "Begin",
-		},
-		{
-			makeTx: func(db *DB) *Tx {
-				sqlTx, _ := db.DB().Begin()
-				return db.Wrap(sqlTx)
-			},
-			desc: "Wrap",
-		},
-		{
-			makeTx: func(db *DB) *Tx {
-				tx, _ := db.BeginTx(context.Background(), nil)
-				return tx
-			},
-			desc: "BeginTx",
-		},
-	}
-
-	db := getPreparedDB()
-
-	var (
-		lastID int
-		name   string
-		tx     *Tx
-	)
-	err := db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
-	assert.Nil(t, err)
-
-	for _, test := range tests {
-		t.Log(test.desc)
-
-		tx = test.makeTx(db)
-		_, err1 := tx.Insert("item", Params{
-			"name": "name1",
-		}).Execute()
-		_, err2 := tx.Insert("item", Params{
-			"name": "name2",
-		}).Execute()
-		if err1 == nil && err2 == nil {
-			assert.Nil(t, tx.Commit())
-		} else {
-			t.Errorf("Unexpected TX rollback: %v, %v", err1, err2)
-			_ = tx.Rollback()
-		}
-
-		q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
-		assert.Nil(t, q.Bind(Params{"id": lastID + 1}).Row(&name))
-		assert.Equal(t, "name1", name)
-		assert.Nil(t, q.Bind(Params{"id": lastID + 2}).Row(&name))
-		assert.Equal(t, "name2", name)
-
-		tx = test.makeTx(db)
-		_, err3 := tx.NewQuery("DELETE FROM item WHERE id=7").Execute()
-		_, err4 := tx.NewQuery("DELETE FROM items WHERE id=7").Execute()
-		if err3 == nil && err4 == nil {
-			t.Error("Unexpected TX commit")
-			assert.Nil(t, tx.Commit())
-		} else {
-			_ = tx.Rollback()
-		}
-	}
-}
-
-func TestDB_Transactional(t *testing.T) {
-	db := getPreparedDB()
-
-	var (
-		lastID int
-		name   string
-	)
-	assert.Nil(t, db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID))
-
-	err := db.Transactional(func(tx *Tx) error {
-		_, err := tx.Insert("item", Params{
-			"name": "name1",
-		}).Execute()
-		if err != nil {
-			return err
-		}
-		_, err = tx.Insert("item", Params{
-			"name": "name2",
-		}).Execute()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if assert.Nil(t, err) {
-		q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
-		assert.Nil(t, q.Bind(Params{"id": lastID + 1}).Row(&name))
-		assert.Equal(t, "name1", name)
-		assert.Nil(t, q.Bind(Params{"id": lastID + 2}).Row(&name))
-		assert.Equal(t, "name2", name)
-	}
-
-	err = db.Transactional(func(tx *Tx) error {
-		_, err := tx.NewQuery("DELETE FROM item WHERE id=2").Execute()
-		if err != nil {
-			return err
-		}
-		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if assert.NotNil(t, err) {
-		assert.Nil(t, db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name))
-		assert.Equal(t, "Go in Action", name)
-	}
-
-	// Rollback called within Transactional and return error
-	err = db.Transactional(func(tx *Tx) error {
-		_, err := tx.NewQuery("DELETE FROM item WHERE id=2").Execute()
-		if err != nil {
-			return err
-		}
-		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
-		if err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		return nil
-	})
-	if assert.NotNil(t, err) {
-		assert.Nil(t, db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name))
-		assert.Equal(t, "Go in Action", name)
-	}
-
-	// Rollback called within Transactional without returning error
-	err = db.Transactional(func(tx *Tx) error {
-		_, err := tx.NewQuery("DELETE FROM item WHERE id=2").Execute()
-		if err != nil {
-			return err
-		}
-		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
-		if err != nil {
-			_ = tx.Rollback()
-			return nil
-		}
-		return nil
-	})
-	if assert.Nil(t, err) {
-		assert.Nil(t, db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name))
-		assert.Equal(t, "Go in Action", name)
-	}
-}
-
 func TestErrors_Error(t *testing.T) {
 	errs := Errors{}
 	assert.Equal(t, "", errs.Error())
@@ -340,32 +117,6 @@ func TestErrors_Error(t *testing.T) {
 	assert.Equal(t, "a", errs.Error())
 	errs = Errors{errors.New("a"), errors.New("b")}
 	assert.Equal(t, "a\nb", errs.Error())
-}
-
-func getDB() *DB {
-	db, err := Open("mysql", TestDSN)
-	if err != nil {
-		panic(err)
-	}
-	return db
-}
-
-func getPreparedDB() *DB {
-	db := getDB()
-	s, err := os.ReadFile(FixtureFile)
-	if err != nil {
-		panic(err)
-	}
-	lines := strings.Split(string(s), ";")
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		if _, err := db.NewQuery(line).Execute(); err != nil {
-			panic(err)
-		}
-	}
-	return db
 }
 
 // Naming according to issue 49 ( https://github.com/go-ozzo/ozzo-dbx/issues/49 )
