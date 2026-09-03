@@ -63,25 +63,25 @@ func TestSelectQuery(t *testing.T) {
 
 func TestSelectQuery_Data(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	q := db.Select("id", "email").From("customer").OrderBy("id")
 
 	var customer Customer
-	q.One(&customer)
+	assert.Nil(t, q.One(&customer))
 	assert.Equal(t, customer.Email, "user1@example.com", "customer.Email")
 
 	var customers []Customer
-	q.All(&customers)
+	assert.Nil(t, q.All(&customers))
 	assert.Equal(t, len(customers), 3, "len(customers)")
 
 	rows, _ := q.Rows()
 	customer.Email = ""
-	rows.one(&customer)
+	assert.Nil(t, rows.one(&customer))
 	assert.Equal(t, customer.Email, "user1@example.com", "customer.Email")
 
 	var id, email string
-	q.Row(&id, &email)
+	assert.Nil(t, q.Row(&id, &email))
 	assert.Equal(t, id, "1", "id")
 	assert.Equal(t, email, "user1@example.com", "email")
 
@@ -100,7 +100,7 @@ func TestSelectQuery_Data(t *testing.T) {
 
 func TestSelectQuery_Model(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	{
 		// One without specifying FROM

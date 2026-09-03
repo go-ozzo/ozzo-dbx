@@ -120,7 +120,7 @@ func (q *Query) logSQL() string {
 		} else {
 			sv = fmt.Sprintf("%v", v)
 		}
-		s = strings.Replace(s, "{:"+k+"}", sv, -1)
+		s = strings.ReplaceAll(s, "{:"+k+"}", sv)
 	}
 	return s
 }
@@ -198,13 +198,13 @@ func (q *Query) Execute() (result sql.Result, err error) {
 	}
 
 	if q.ExecLogFunc != nil {
-		q.ExecLogFunc(q.ctx, time.Now().Sub(start), q.logSQL(), result, err)
+		q.ExecLogFunc(q.ctx, time.Since(start), q.logSQL(), result, err)
 	}
 	if q.LogFunc != nil {
-		q.LogFunc("[%.2fms] Execute SQL: %v", float64(time.Now().Sub(start).Milliseconds()), q.logSQL())
+		q.LogFunc("[%.2fms] Execute SQL: %v", float64(time.Since(start).Milliseconds()), q.logSQL())
 	}
 	if q.PerfFunc != nil {
-		q.PerfFunc(time.Now().Sub(start).Nanoseconds(), q.logSQL(), true)
+		q.PerfFunc(time.Since(start).Nanoseconds(), q.logSQL(), true)
 	}
 	return
 }
@@ -287,13 +287,13 @@ func (q *Query) Rows() (rows *Rows, err error) {
 	rows = &Rows{rr, q.FieldMapper}
 
 	if q.QueryLogFunc != nil {
-		q.QueryLogFunc(q.ctx, time.Now().Sub(start), q.logSQL(), rr, err)
+		q.QueryLogFunc(q.ctx, time.Since(start), q.logSQL(), rr, err)
 	}
 	if q.LogFunc != nil {
-		q.LogFunc("[%.2fms] Query SQL: %v", float64(time.Now().Sub(start).Milliseconds()), q.logSQL())
+		q.LogFunc("[%.2fms] Query SQL: %v", float64(time.Since(start).Milliseconds()), q.logSQL())
 	}
 	if q.PerfFunc != nil {
-		q.PerfFunc(time.Now().Sub(start).Nanoseconds(), q.logSQL(), false)
+		q.PerfFunc(time.Since(start).Nanoseconds(), q.logSQL(), false)
 	}
 	return
 }

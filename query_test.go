@@ -32,7 +32,7 @@ func TestNewQuery(t *testing.T) {
 
 func TestQuery_Execute(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	result, err := db.NewQuery("INSERT INTO item (name) VALUES ('test')").Execute()
 	if assert.Nil(t, err) {
@@ -103,7 +103,7 @@ type InnerCustomer struct {
 
 func TestQuery_Rows(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var (
 		sql string
@@ -160,7 +160,7 @@ func TestQuery_Rows(t *testing.T) {
 	var customerPtr2 CustomerPtr
 	sql = `SELECT id, email, address FROM customer WHERE id=2`
 	rows2, err := db.sqlDB.Query(sql)
-	defer rows2.Close()
+	defer func() { _ = rows2.Close() }()
 	assert.Nil(t, err)
 	rows2.Next()
 	err = rows2.Scan(&customerPtr2.ID, &customerPtr2.Email, &customerPtr2.Address)
@@ -237,7 +237,7 @@ func TestQuery_Rows(t *testing.T) {
 	if assert.Nil(t, err) {
 		s := ""
 		for rows.Next() {
-			rows.ScanStruct(&customer)
+			assert.Nil(t, rows.ScanStruct(&customer))
 			s += customer.Email + ","
 		}
 		assert.Equal(t, s, "user3@example.com,user2@example.com,user1@example.com,", "Rows().Next()")
@@ -259,21 +259,21 @@ func TestQuery_Rows(t *testing.T) {
 	// prepared statement
 	sql = `SELECT * FROM customer WHERE id={:id}`
 	q := db.NewQuery(sql).Prepare()
-	q.Bind(Params{"id": 1}).One(&customer)
+	assert.Nil(t, q.Bind(Params{"id": 1}).One(&customer))
 	assert.Equal(t, customer.ID, 1, "prepared@1")
 	err = q.Bind(Params{"id": 20}).One(&customer)
 	assert.Equal(t, err, ss.ErrNoRows, "prepared@2")
-	q.Bind(Params{"id": 3}).One(&customer)
+	assert.Nil(t, q.Bind(Params{"id": 3}).One(&customer))
 	assert.Equal(t, customer.ID, 3, "prepared@3")
 
 	sql = `SELECT name FROM customer WHERE id={:id}`
 	var name string
 	q = db.NewQuery(sql).Prepare()
-	q.Bind(Params{"id": 1}).Row(&name)
+	assert.Nil(t, q.Bind(Params{"id": 1}).Row(&name))
 	assert.Equal(t, name, "user1", "prepared2@1")
 	err = q.Bind(Params{"id": 20}).Row(&name)
 	assert.Equal(t, err, ss.ErrNoRows, "prepared2@2")
-	q.Bind(Params{"id": 3}).Row(&name)
+	assert.Nil(t, q.Bind(Params{"id": 3}).Row(&name))
 	assert.Equal(t, name, "user3", "prepared2@3")
 
 	// Query.LastError

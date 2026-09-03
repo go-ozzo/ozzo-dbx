@@ -209,7 +209,8 @@ func TestDB_Begin(t *testing.T) {
 		name   string
 		tx     *Tx
 	)
-	db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
+	err := db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
+	assert.Nil(t, err)
 
 	for _, test := range tests {
 		t.Log(test.desc)
@@ -222,16 +223,16 @@ func TestDB_Begin(t *testing.T) {
 			"name": "name2",
 		}).Execute()
 		if err1 == nil && err2 == nil {
-			tx.Commit()
+			assert.Nil(t, tx.Commit())
 		} else {
 			t.Errorf("Unexpected TX rollback: %v, %v", err1, err2)
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 
 		q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
-		q.Bind(Params{"id": lastID + 1}).Row(&name)
+		assert.Nil(t, q.Bind(Params{"id": lastID + 1}).Row(&name))
 		assert.Equal(t, "name1", name)
-		q.Bind(Params{"id": lastID + 2}).Row(&name)
+		assert.Nil(t, q.Bind(Params{"id": lastID + 2}).Row(&name))
 		assert.Equal(t, "name2", name)
 
 		tx = test.makeTx(db)
@@ -239,9 +240,9 @@ func TestDB_Begin(t *testing.T) {
 		_, err4 := tx.NewQuery("DELETE FROM items WHERE id=7").Execute()
 		if err3 == nil && err4 == nil {
 			t.Error("Unexpected TX commit")
-			tx.Commit()
+			assert.Nil(t, tx.Commit())
 		} else {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}
 }
@@ -253,7 +254,7 @@ func TestDB_Transactional(t *testing.T) {
 		lastID int
 		name   string
 	)
-	db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID)
+	assert.Nil(t, db.NewQuery("SELECT MAX(id) FROM item").Row(&lastID))
 
 	err := db.Transactional(func(tx *Tx) error {
 		_, err := tx.Insert("item", Params{
@@ -273,9 +274,9 @@ func TestDB_Transactional(t *testing.T) {
 
 	if assert.Nil(t, err) {
 		q := db.NewQuery("SELECT name FROM item WHERE id={:id}")
-		q.Bind(Params{"id": lastID + 1}).Row(&name)
+		assert.Nil(t, q.Bind(Params{"id": lastID + 1}).Row(&name))
 		assert.Equal(t, "name1", name)
-		q.Bind(Params{"id": lastID + 2}).Row(&name)
+		assert.Nil(t, q.Bind(Params{"id": lastID + 2}).Row(&name))
 		assert.Equal(t, "name2", name)
 	}
 
@@ -291,7 +292,7 @@ func TestDB_Transactional(t *testing.T) {
 		return nil
 	})
 	if assert.NotNil(t, err) {
-		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
+		assert.Nil(t, db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name))
 		assert.Equal(t, "Go in Action", name)
 	}
 
@@ -303,13 +304,13 @@ func TestDB_Transactional(t *testing.T) {
 		}
 		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return err
 		}
 		return nil
 	})
 	if assert.NotNil(t, err) {
-		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
+		assert.Nil(t, db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name))
 		assert.Equal(t, "Go in Action", name)
 	}
 
@@ -321,13 +322,13 @@ func TestDB_Transactional(t *testing.T) {
 		}
 		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return nil
 		}
 		return nil
 	})
 	if assert.Nil(t, err) {
-		db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name)
+		assert.Nil(t, db.NewQuery("SELECT name FROM item WHERE id=2").Row(&name))
 		assert.Equal(t, "Go in Action", name)
 	}
 }
@@ -369,9 +370,7 @@ func getPreparedDB() *DB {
 
 // Naming according to issue 49 ( https://github.com/go-ozzo/ozzo-dbx/issues/49 )
 
-type ArtistDAO struct {
-	nickname string
-}
+type ArtistDAO struct{}
 
 func (ArtistDAO) TableName() string {
 	return "artists"

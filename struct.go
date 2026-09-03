@@ -83,7 +83,7 @@ func getStructInfo(a reflect.Type, mapper FieldMapFunc) *StructInfo {
 // GetStructInfo returns field mapping information for a given model struct & field mapper.
 func GetStructInfo(modelStruct interface{}, mapper FieldMapFunc) (*StructInfo, error) {
 	t := reflect.TypeOf(modelStruct)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Ptr { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
@@ -94,7 +94,7 @@ func GetStructInfo(modelStruct interface{}, mapper FieldMapFunc) (*StructInfo, e
 
 func newStructValue(model interface{}, fieldMapFunc FieldMapFunc, tableMapFunc TableMapFunc) *structValue {
 	value := reflect.ValueOf(model)
-	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() {
+	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct || value.IsNil() { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		return nil
 	}
 
@@ -151,7 +151,7 @@ func (fi *FieldInfo) ColumnName() string {
 func (fi *FieldInfo) getValue(a reflect.Value) interface{} {
 	for _, i := range fi.path {
 		a = a.Field(i)
-		if a.Kind() == reflect.Ptr {
+		if a.Kind() == reflect.Ptr { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 			if a.IsNil() {
 				return nil
 			}
@@ -224,7 +224,7 @@ func (si *StructInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix
 		path2 = append(path2, i)
 
 		ft := field.Type
-		if ft.Kind() == reflect.Ptr {
+		if ft.Kind() == reflect.Ptr { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 			ft = ft.Elem()
 		}
 
@@ -274,7 +274,7 @@ func isNestedStruct(t reflect.Type) bool {
 	if t.PkgPath() == "time" && t.Name() == "Time" {
 		return false
 	}
-	return t.Kind() == reflect.Struct && !reflect.PtrTo(t).Implements(scannerType)
+	return t.Kind() == reflect.Struct && !reflect.PointerTo(t).Implements(scannerType)
 }
 
 func parseTag(tag string) (string, bool) {
@@ -300,7 +300,7 @@ func concat(s1, s2 string) string {
 // indirect dereferences pointers and returns the actual value it points to.
 // If a pointer is nil, it will be initialized with a new value.
 func indirect(v reflect.Value) reflect.Value {
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Ptr { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
 		}
@@ -315,14 +315,14 @@ func indirect(v reflect.Value) reflect.Value {
 func GetTableName(a interface{}) string {
 	if tm, ok := a.(TableModel); ok {
 		v := reflect.ValueOf(a)
-		if v.Kind() == reflect.Ptr && v.IsNil() {
+		if v.Kind() == reflect.Ptr && v.IsNil() { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 			a = reflect.New(v.Type().Elem()).Interface()
 			return a.(TableModel).TableName()
 		}
 		return tm.TableName()
 	}
 	t := reflect.TypeOf(a)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Ptr { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		t = t.Elem()
 	}
 	if t.Kind() == reflect.Slice {

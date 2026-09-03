@@ -304,7 +304,7 @@ func (s *SelectQuery) One(a interface{}) error {
 // please use Where() to specify the filtering condition.
 func (s *SelectQuery) Model(pk, model interface{}) error {
 	t := reflect.TypeOf(model)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Ptr { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {

@@ -25,8 +25,8 @@ type (
 )
 
 var (
-	MissingPKError   = errors.New("missing primary key declaration")
-	CompositePKError = errors.New("composite primary key is not supported")
+	MissingPKError   = errors.New("missing primary key declaration")        //nolint:staticcheck // public API, renaming would break backward compatibility
+	CompositePKError = errors.New("composite primary key is not supported") //nolint:staticcheck // public API, renaming would break backward compatibility
 )
 
 func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
@@ -129,7 +129,7 @@ func isAutoInc(value interface{}) bool {
 		return v.Int() == 0
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return v.Uint() == 0
-	case reflect.Ptr:
+	case reflect.Ptr: //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		return v.IsNil() || isAutoInc(v.Elem())
 	case reflect.Invalid:
 		return true

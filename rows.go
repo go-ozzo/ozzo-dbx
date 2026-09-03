@@ -65,7 +65,7 @@ func (r *Rows) ScanMap(a NullStringMap) error {
 // You may also set Query.FieldMapper to change the behavior for particular queries.
 func (r *Rows) ScanStruct(a interface{}) error {
 	rv := reflect.ValueOf(a)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+	if rv.Kind() != reflect.Ptr || rv.IsNil() { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		return VarTypeError("must be a pointer")
 	}
 	rv = indirect(rv)
@@ -100,10 +100,10 @@ func (r *Rows) ScanStruct(a interface{}) error {
 // all populates all rows of query result into a slice of struct or NullStringMap.
 // Note that the slice must be given as a pointer.
 func (r *Rows) all(slice interface{}) error {
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // standard cleanup
 
 	v := reflect.ValueOf(slice)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
+	if v.Kind() != reflect.Ptr || v.IsNil() { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		return VarTypeError("must be a pointer")
 	}
 	v = indirect(v)
@@ -133,7 +133,7 @@ func (r *Rows) all(slice interface{}) error {
 		return r.Close()
 	}
 
-	isPtr := et.Kind() == reflect.Ptr
+	isPtr := et.Kind() == reflect.Ptr //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 	if isPtr {
 		et = et.Elem()
 	}
@@ -179,10 +179,10 @@ func (r *Rows) all(slice interface{}) error {
 // column populates the given slice with the first column of the query result.
 // Note that the slice must be given as a pointer.
 func (r *Rows) column(slice interface{}) error {
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // standard cleanup
 
 	v := reflect.ValueOf(slice)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
+	if v.Kind() != reflect.Ptr || v.IsNil() { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		return VarTypeError("must be a pointer to a slice")
 	}
 	v = indirect(v)
@@ -216,7 +216,7 @@ func (r *Rows) column(slice interface{}) error {
 // one populates a single row of query result into a struct or a NullStringMap.
 // Note that if a struct is given, it should be a pointer.
 func (r *Rows) one(a interface{}) error {
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // standard cleanup
 
 	if !r.Next() {
 		if err := r.Err(); err != nil {
@@ -228,7 +228,7 @@ func (r *Rows) one(a interface{}) error {
 	var err error
 
 	rt := reflect.TypeOf(a)
-	if rt.Kind() == reflect.Ptr && rt.Elem().Kind() == reflect.Map {
+	if rt.Kind() == reflect.Ptr && rt.Elem().Kind() == reflect.Map { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
 		// pointer to map
 		v := indirect(reflect.ValueOf(a))
 		if v.IsNil() {
@@ -260,7 +260,7 @@ func (r *Rows) one(a interface{}) error {
 
 // row populates a single row of query result into a list of variables.
 func (r *Rows) row(a ...interface{}) error {
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // standard cleanup
 
 	for _, dp := range a {
 		if _, ok := dp.(*sql.RawBytes); ok {
