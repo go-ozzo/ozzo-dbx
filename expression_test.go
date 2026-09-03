@@ -33,7 +33,7 @@ func TestHashExp(t *testing.T) {
 		"k4": "abc",
 		"k5": []interface{}{1, 2},
 	}
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 	params := Params{"k0": "v0"}
 	expected := "`k1` IS NULL AND (s1) AND `k3`={:p2} AND `k4`={:p3} AND `k5` IN ({:p4}, {:p5})"
 
@@ -70,7 +70,7 @@ func TestAndOrExp(t *testing.T) {
 }
 
 func TestInExp(t *testing.T) {
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 
 	e1 := In("age", 1, 2, 3)
 	params := Params{}
@@ -100,7 +100,7 @@ func TestInExp(t *testing.T) {
 }
 
 func TestLikeExp(t *testing.T) {
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 
 	e1 := Like("name", "a", "b", "c")
 	params := Params{}
@@ -157,7 +157,7 @@ func TestLikeExp(t *testing.T) {
 }
 
 func TestBetweenExp(t *testing.T) {
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 
 	e1 := Between("age", 30, 40)
 	params := Params{}

@@ -42,8 +42,8 @@ func TestPgsqlBuilder_AlterColumn(t *testing.T) {
 }
 
 func getPgsqlBuilder() Builder {
-	db := getDB()
-	b := NewPgsqlBuilder(db, db.sqlDB)
+	db := NewFromDB(nil, "postgres")
+	b := NewPgsqlBuilder(db, nil)
 	db.Builder = b
 	return b
 }

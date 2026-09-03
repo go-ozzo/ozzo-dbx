@@ -24,7 +24,7 @@ func TestQB_BuildSelect(t *testing.T) {
 		{"aliased columns", []string{"name As Name", "users.last_name", "u.first1 first"}, false, "", "SELECT `name` AS `Name`, `users`.`last_name`, `u`.`first1` AS `first`"},
 	}
 
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 	qb := db.QueryBuilder()
 	for _, test := range tests {
 		s := qb.BuildSelect(test.cols, test.distinct, test.option)
@@ -46,7 +46,7 @@ func TestQB_BuildFrom(t *testing.T) {
 		{"table prefix and alias", []string{"pub.users p.u", "posts AS p1"}, "FROM `pub`.`users` `p.u`, `posts` `p1`"},
 	}
 
-	qb := getDB().QueryBuilder()
+	qb := NewFromDB(nil, "mysql").QueryBuilder()
 	for _, test := range tests {
 		s := qb.BuildFrom(test.tables)
 		assert.Equal(t, test.expected, s, test.tag)
@@ -64,7 +64,7 @@ func TestQB_BuildGroupBy(t *testing.T) {
 		{"multiple columns", []string{"name", "age"}, "GROUP BY `name`, `age`"},
 	}
 
-	qb := getDB().QueryBuilder()
+	qb := NewFromDB(nil, "mysql").QueryBuilder()
 	for _, test := range tests {
 		s := qb.BuildGroupBy(test.cols)
 		assert.Equal(t, test.expected, s, test.tag)
@@ -83,7 +83,7 @@ func TestQB_BuildWhere(t *testing.T) {
 		{NewExp(""), "", 0, "t3"},
 	}
 
-	qb := getDB().QueryBuilder()
+	qb := NewFromDB(nil, "mysql").QueryBuilder()
 	for _, test := range tests {
 		params := Params{}
 		s := qb.BuildWhere(test.exp, params)
@@ -104,7 +104,7 @@ func TestQB_BuildHaving(t *testing.T) {
 		{NewExp(""), "", 0, "t3"},
 	}
 
-	qb := getDB().QueryBuilder()
+	qb := NewFromDB(nil, "mysql").QueryBuilder()
 	for _, test := range tests {
 		params := Params{}
 		s := qb.BuildHaving(test.exp, params)
@@ -123,7 +123,7 @@ func TestQB_BuildOrderBy(t *testing.T) {
 		{"single column", []string{"name"}, "ORDER BY `name`"},
 		{"multiple columns", []string{"name ASC", "age DESC", "id desc"}, "ORDER BY `name` ASC, `age` DESC, `id` desc"},
 	}
-	qb := getDB().QueryBuilder().(*BaseQueryBuilder)
+	qb := NewFromDB(nil, "mysql").QueryBuilder().(*BaseQueryBuilder)
 	for _, test := range tests {
 		s := qb.BuildOrderBy(test.cols)
 		assert.Equal(t, test.expected, s, test.tag)
@@ -143,7 +143,7 @@ func TestQB_BuildLimit(t *testing.T) {
 		{"t5", -1, 2, "LIMIT 9223372036854775807 OFFSET 2"},
 		{"t6", -1, 0, ""},
 	}
-	qb := getDB().QueryBuilder().(*BaseQueryBuilder)
+	qb := NewFromDB(nil, "mysql").QueryBuilder().(*BaseQueryBuilder)
 	for _, test := range tests {
 		s := qb.BuildLimit(test.limit, test.offset)
 		assert.Equal(t, test.expected, s, test.tag)
@@ -151,7 +151,7 @@ func TestQB_BuildLimit(t *testing.T) {
 }
 
 func TestQB_BuildOrderByAndLimit(t *testing.T) {
-	qb := getDB().QueryBuilder()
+	qb := NewFromDB(nil, "mysql").QueryBuilder()
 
 	sql := qb.BuildOrderByAndLimit("SELECT *", []string{"name"}, 10, 2)
 	expected := "SELECT * ORDER BY `name` LIMIT 10 OFFSET 2"
@@ -171,7 +171,7 @@ func TestQB_BuildOrderByAndLimit(t *testing.T) {
 }
 
 func TestQB_BuildJoin(t *testing.T) {
-	qb := getDB().QueryBuilder()
+	qb := NewFromDB(nil, "mysql").QueryBuilder()
 
 	params := Params{}
 	ji := JoinInfo{"LEFT JOIN", "users u", NewExp("id=u.id", Params{"id": 1})}
@@ -199,7 +199,7 @@ func TestQB_BuildJoin(t *testing.T) {
 }
 
 func TestQB_BuildUnion(t *testing.T) {
-	db := getDB()
+	db := NewFromDB(nil, "mysql")
 	qb := db.QueryBuilder()
 
 	params := Params{}

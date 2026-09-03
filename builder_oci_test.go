@@ -49,8 +49,8 @@ func TestOciQueryBuilder_BuildOrderByAndLimit(t *testing.T) {
 }
 
 func getOciBuilder() Builder {
-	db := getDB()
-	b := NewOciBuilder(db, db.sqlDB)
+	db := NewFromDB(nil, "oci8")
+	b := NewOciBuilder(db, nil)
 	db.Builder = b
 	return b
 }
