@@ -54,7 +54,7 @@ For an example on how this library is used in an application, please refer to [g
 
 ## Requirements
 
-Go 1.21 or above.
+Go 1.22 or above.
 
 ## Installation
 

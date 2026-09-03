@@ -8,7 +8,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -352,7 +351,7 @@ func getDB() *DB {
 
 func getPreparedDB() *DB {
 	db := getDB()
-	s, err := ioutil.ReadFile(FixtureFile)
+	s, err := os.ReadFile(FixtureFile)
 	if err != nil {
 		panic(err)
 	}
