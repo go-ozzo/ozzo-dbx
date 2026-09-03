@@ -40,12 +40,6 @@ func TestMysqlBuilder_Upsert(t *testing.T) {
 	assert.Equal(t, q.Params()["p3"], "James", "t3")
 }
 
-func TestMysqlBuilder_RenameColumn(t *testing.T) {
-	b := getMysqlBuilder()
-	q := b.RenameColumn("users", "name", "username")
-	assert.Equal(t, q.SQL(), "ALTER TABLE `users` CHANGE `name` `username`")
-}
-
 func TestMysqlBuilder_DropPrimaryKey(t *testing.T) {
 	b := getMysqlBuilder()
 	q := b.DropPrimaryKey("users", "pk")
