@@ -187,16 +187,16 @@ func (e HashExp) Build(db *DB, params Params) string {
 	var parts []string
 	for _, name := range names {
 		value := e[name]
-		switch value.(type) {
+		switch value := value.(type) {
 		case nil:
 			name = db.QuoteColumnName(name)
 			parts = append(parts, name+" IS NULL")
 		case Expression:
-			if sql := value.(Expression).Build(db, params); sql != "" {
+			if sql := value.Build(db, params); sql != "" {
 				parts = append(parts, "("+sql+")")
 			}
 		case []interface{}:
-			in := In(name, value.([]interface{})...)
+			in := In(name, value...)
 			if sql := in.Build(db, params); sql != "" {
 				parts = append(parts, sql)
 			}
@@ -271,11 +271,11 @@ func (e *InExp) Build(db *DB, params Params) string {
 
 	var values []string
 	for _, value := range e.values {
-		switch value.(type) {
+		switch value := value.(type) {
 		case nil:
 			values = append(values, "NULL")
 		case Expression:
-			sql := value.(Expression).Build(db, params)
+			sql := value.Build(db, params)
 			values = append(values, sql)
 		default:
 			name := fmt.Sprintf("p%v", len(params))
@@ -339,7 +339,7 @@ func (e *LikeExp) Build(db *DB, params Params) string {
 	for _, value := range e.values {
 		name := fmt.Sprintf("p%v", len(params))
 		for i := 0; i < len(e.escape); i += 2 {
-			value = strings.Replace(value, e.escape[i], e.escape[i+1], -1)
+			value = strings.ReplaceAll(value, e.escape[i], e.escape[i+1])
 		}
 		if e.left {
 			value = "%" + value

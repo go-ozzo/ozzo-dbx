@@ -139,7 +139,7 @@ func (b *BaseBuilder) GeneratePlaceholder(int) string {
 
 // Quote quotes a string so that it can be embedded in a SQL statement as a string value.
 func (b *BaseBuilder) Quote(s string) string {
-	return "'" + strings.Replace(s, "'", "''", -1) + "'"
+	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
 }
 
 // QuoteSimpleTableName quotes a simple table name.

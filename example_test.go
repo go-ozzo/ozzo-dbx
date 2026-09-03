@@ -6,7 +6,7 @@ import (
 	"github.com/go-ozzo/ozzo-dbx"
 )
 
-// This example shows how to populate DB data in different ways.
+//nolint:errcheck // Example code — error handling omitted for brevity
 func Example_dbQueries() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -38,7 +38,7 @@ func Example_dbQueries() {
 	}
 }
 
-// This example shows how to use query builder to build DB queries.
+//nolint:errcheck // Example code — error handling omitted for brevity
 func Example_queryBuilder() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -62,7 +62,7 @@ func Example_queryBuilder() {
 	}).Execute()
 }
 
-// This example shows how to use query builder in transactions.
+//nolint:errcheck // Example code — error handling omitted for brevity
 func Example_transactions() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -85,7 +85,7 @@ type Customer struct {
 	Name string
 }
 
-// This example shows how to do CRUD operations.
+//nolint:errcheck // Example code — error handling omitted for brevity
 func Example_crudOperations() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -104,6 +104,7 @@ func Example_crudOperations() {
 	db.Model(&customer).Delete()
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleDB_Insert() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -113,6 +114,7 @@ func ExampleDB_Insert() {
 	}).Execute()
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleRows_ScanMap() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -126,6 +128,7 @@ func ExampleRows_ScanMap() {
 	}
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleRows_ScanStruct() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -141,6 +144,7 @@ func ExampleRows_ScanStruct() {
 	}
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleQuery_All() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
@@ -159,6 +163,7 @@ func ExampleQuery_All() {
 	}
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleQuery_One() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
@@ -175,6 +180,7 @@ func ExampleQuery_One() {
 	fmt.Println(user2["id"].String, user2["name"].String)
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleQuery_Row() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 	sql := "SELECT id, name FROM users LIMIT 10"
@@ -187,6 +193,7 @@ func ExampleQuery_Row() {
 	db.NewQuery(sql).Row(&id, &name)
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleQuery_Rows() {
 	var user struct {
 		ID, Name string
@@ -202,6 +209,7 @@ func ExampleQuery_Rows() {
 	}
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleQuery_Bind() {
 	var user struct {
 		ID, Name string
@@ -214,6 +222,7 @@ func ExampleQuery_Bind() {
 	q.Bind(dbx.Params{"age": 30, "status": 1}).One(&user)
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleQuery_Prepare() {
 	var users1, users2, users3 []struct {
 		ID, Name string
@@ -230,6 +239,7 @@ func ExampleQuery_Prepare() {
 	q.Bind(dbx.Params{"age": 10, "status": 1}).All(&users3)
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleDB() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 
@@ -261,6 +271,7 @@ func ExampleOpen() {
 	}
 }
 
+//nolint:errcheck // Example code — error handling omitted for brevity
 func ExampleDB_Begin() {
 	db, _ := dbx.Open("mysql", "user:pass@/example")
 

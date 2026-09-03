@@ -14,7 +14,7 @@ type Item struct {
 
 func TestModelQuery_Insert(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	name := "test"
 	email := "test@example.com"
@@ -29,7 +29,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 4, customer.ID)
 			var c Customer
-			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c))
 			assert.Equal(t, name, c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
@@ -47,7 +47,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) && assert.NotNil(t, customer.ID) {
 			assert.Equal(t, 5, *customer.ID)
 			var c CustomerPtr
-			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c))
 			assert.Equal(t, name, c.Name)
 			if assert.NotNil(t, c.Email) {
 				assert.Equal(t, email, *c.Email)
@@ -70,7 +70,7 @@ func TestModelQuery_Insert(t *testing.T) {
 			// potential todo: need to check if the field implements sql.Scanner
 			// assert.Equal(t, int64(6), customer.ID.Int64)
 			var c CustomerNull
-			db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 4}).One(&c))
 			assert.Equal(t, name, c.Name)
 			assert.Equal(t, email, c.Email.String)
 			if assert.NotNil(t, c.Status) {
@@ -94,7 +94,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 100, customer.Id)
 			var c CustomerEmbedded
-			db.Select().From("customer").Where(HashExp{"ID": 100}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": 100}).One(&c))
 			assert.Equal(t, name, *c.Name)
 			assert.Equal(t, email, *c.Email)
 			if assert.NotNil(t, c.Status) {
@@ -115,7 +115,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 101, customer.ID)
 			var c Customer
-			db.Select().From("customer").Where(HashExp{"ID": 101}).One(&c)
+			db.Select().From("customer").Where(HashExp{"ID": 101}).One(&c) //nolint:errcheck // NULL name → string scan error expected
 			assert.Equal(t, "", c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
@@ -129,7 +129,7 @@ func TestModelQuery_Insert(t *testing.T) {
 
 func TestModelQuery_Update(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	id := 2
 	name := "test"
@@ -144,7 +144,7 @@ func TestModelQuery_Update(t *testing.T) {
 		err := db.Model(&customer).Update()
 		if assert.Nil(t, err) {
 			var c Customer
-			db.Select().From("customer").Where(HashExp{"ID": id}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": id}).One(&c))
 			assert.Equal(t, name, c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
@@ -171,7 +171,7 @@ func TestModelQuery_Update(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, id, *customer.ID)
 			var c CustomerPtr
-			db.Select().From("customer").Where(HashExp{"ID": id}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": id}).One(&c))
 			assert.Equal(t, name, c.Name)
 			if assert.NotNil(t, c.Email) {
 				assert.Equal(t, email, *c.Email)
@@ -192,7 +192,7 @@ func TestModelQuery_Update(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, id, *customer.ID)
 			var c CustomerPtr
-			db.Select().From("customer").Where(HashExp{"ID": id}).One(&c)
+			assert.Nil(t, db.Select().From("customer").Where(HashExp{"ID": id}).One(&c))
 			assert.Equal(t, name, c.Name)
 			if assert.NotNil(t, c.Email) {
 				assert.Equal(t, email, *c.Email)
@@ -212,7 +212,7 @@ func TestModelQuery_Update(t *testing.T) {
 
 func TestModelQuery_Delete(t *testing.T) {
 	db := getPreparedDB()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	customer := Customer{
 		ID: 2,

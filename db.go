@@ -204,7 +204,7 @@ func (db *DB) Transactional(f func(*Tx) error) (err error) {
 
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			panic(p)
 		} else if err != nil {
 			if err2 := tx.Rollback(); err2 != nil {
@@ -236,7 +236,7 @@ func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f f
 
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			panic(p)
 		} else if err != nil {
 			if err2 := tx.Rollback(); err2 != nil {
