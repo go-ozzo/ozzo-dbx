@@ -7,6 +7,7 @@ package dbx
 import (
 	"database/sql"
 	"reflect"
+	"strings"
 )
 
 // VarTypeError indicates a variable type error when trying to populating a variable with DB result.
@@ -80,6 +81,14 @@ func (r *Rows) ScanStruct(a interface{}) error {
 	for i, col := range cols {
 		if fi, ok := si.dbNameMap[col]; ok {
 			refs[i] = fi.getField(rv).Addr().Interface()
+		} else if dotIdx := strings.Index(col, "."); dotIdx >= 0 {
+			// Strip table alias prefix (e.g., "src.qualified_name" → "qualified_name").
+			// Uses first dot to preserve nested struct names (e.g., "src.address.city" → "address.city").
+			if fi, ok := si.dbNameMap[col[dotIdx+1:]]; ok {
+				refs[i] = fi.getField(rv).Addr().Interface()
+			} else {
+				refs[i] = &sql.NullString{}
+			}
 		} else {
 			refs[i] = &sql.NullString{}
 		}
@@ -142,6 +151,14 @@ func (r *Rows) all(slice interface{}) error {
 		for i, col := range cols {
 			if fi, ok := si.dbNameMap[col]; ok {
 				refs[i] = fi.getField(ev).Addr().Interface()
+			} else if dotIdx := strings.Index(col, "."); dotIdx >= 0 {
+				// Strip table alias prefix (e.g., "src.qualified_name" → "qualified_name").
+				// Uses first dot to preserve nested struct names (e.g., "src.address.city" → "address.city").
+				if fi, ok := si.dbNameMap[col[dotIdx+1:]]; ok {
+					refs[i] = fi.getField(ev).Addr().Interface()
+				} else {
+					refs[i] = &sql.NullString{}
+				}
 			} else {
 				refs[i] = &sql.NullString{}
 			}
