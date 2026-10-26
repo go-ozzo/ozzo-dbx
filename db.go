@@ -176,7 +176,7 @@ func (db *DB) Begin() (*Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{db.newBuilder(tx), tx}, nil
+	return newTx(db.newBuilder(tx), tx), nil
 }
 
 // BeginTx starts a transaction with the given context and transaction options.
@@ -185,17 +185,18 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{db.newBuilder(tx), tx}, nil
+	return newTx(db.newBuilder(tx), tx), nil
 }
 
 // Wrap encapsulates an existing transaction.
 func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
-	return &Tx{db.newBuilder(sqlTx), sqlTx}
+	return newTx(db.newBuilder(sqlTx), sqlTx)
 }
 
 // Transactional starts a transaction and executes the given function.
 // If the function returns an error, the transaction will be rolled back.
-// Otherwise, the transaction will be committed.
+// Otherwise, the transaction will be committed. If the DB context (see WithContext) is canceled before
+// the commit, database/sql rolls the transaction back and Transactional returns the context error.
 func (db *DB) Transactional(f func(*Tx) error) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -214,9 +215,7 @@ func (db *DB) Transactional(f func(*Tx) error) (err error) {
 				err = Errors{err, err2}
 			}
 		} else {
-			if err = tx.Commit(); err == sql.ErrTxDone {
-				err = nil
-			}
+			err = tx.commitAfter(db.ctx)
 		}
 	}()
 
@@ -227,7 +226,8 @@ func (db *DB) Transactional(f func(*Tx) error) (err error) {
 
 // TransactionalContext starts a transaction and executes the given function with the given context and transaction options.
 // If the function returns an error, the transaction will be rolled back.
-// Otherwise, the transaction will be committed.
+// Otherwise, the transaction will be committed. If ctx is canceled before the commit, database/sql
+// rolls the transaction back and TransactionalContext returns ctx.Err().
 func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f func(*Tx) error) (err error) {
 	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
@@ -246,9 +246,7 @@ func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f f
 				err = Errors{err, err2}
 			}
 		} else {
-			if err = tx.Commit(); err == sql.ErrTxDone {
-				err = nil
-			}
+			err = tx.commitAfter(ctx)
 		}
 	}()
 
