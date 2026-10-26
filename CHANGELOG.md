@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PostgreSQL `Upsert()` without constraint columns generated `ON CONFLICT DO UPDATE` without a conflict target, which PostgreSQL rejects; it now returns an error before executing (SQLite likewise)
 - `Upsert()` with no column left to update besides the constraint columns generated an empty update clause; it now returns an error before executing
 - `GetTableName()` (the default `DB.TableMapper`) ignored a `TableName()` method with a pointer receiver when given a struct value or a slice of struct values, e.g. `db.Select().All(&[]Customer{})` without `From()`, and fell back to the snake-case type name. Code that relied on the fallback name will now query the table returned by `TableName()`
+- SQLite: `Like()` and the other LIKE expressions never matched an escaped `%` or `_` (e.g. `Like("name", "50%")` did not match "50% off"): the values are escaped with a backslash, but SQLite has no default LIKE escape character. An `ESCAPE '\'` clause is now added on SQLite only (MySQL and PostgreSQL use the backslash by default)
 
 ### Changed
 - `Upsert()` leaves the constraint columns out of the update part on every database. On MySQL `constraints` was ignored before: now a row matched through another unique index keeps its own values in the constraint columns (e.g. its primary key). On PostgreSQL the conflict columns were assigned their own values, a no-op except for `UPDATE OF` triggers and case-insensitive collations

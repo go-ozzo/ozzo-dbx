@@ -156,6 +156,26 @@ func TestLikeExp(t *testing.T) {
 	assert.Equal(t, params["p0"], "%a", `params["p0"]@5`)
 }
 
+func TestLikeExp_EscapeClause(t *testing.T) {
+	// SQLite has no default LIKE escape character: the backslash escaping needs ESCAPE '\'
+	for _, driver := range []string{"sqlite", "sqlite3"} {
+		db := NewFromDB(nil, driver)
+		params := Params{}
+		assert.Equal(t, "`txt` LIKE {:p0} ESCAPE '\\' AND `txt` LIKE {:p1} ESCAPE '\\'", Like("txt", "50%", "a_b").Build(db, params), driver)
+		assert.Equal(t, Params{"p0": `%50\%%`, "p1": `%a\_b%`}, params, driver)
+		assert.Equal(t, "`txt` NOT LIKE {:p0} ESCAPE '\\' OR `txt` NOT LIKE {:p1} ESCAPE '\\'", OrNotLike("txt", "a", "b").Build(db, Params{}), driver)
+		// no escaping, no ESCAPE clause
+		assert.Equal(t, "`txt` LIKE {:p0}", Like("txt", "a").Escape().Build(db, Params{}), driver)
+	}
+
+	// MySQL and PostgreSQL escape with a backslash by default; MySQL must not get ESCAPE '\'
+	// (there the backslash escapes the closing quote)
+	for _, driver := range []string{"mysql", "postgres", "pgx"} {
+		db := NewFromDB(nil, driver)
+		assert.NotContains(t, Like("txt", "50%").Build(db, Params{}), "ESCAPE", driver)
+	}
+}
+
 func TestBetweenExp(t *testing.T) {
 	db := NewFromDB(nil, "mysql")
 
