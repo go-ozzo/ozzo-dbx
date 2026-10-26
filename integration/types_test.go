@@ -84,7 +84,7 @@ type AccountPeriod struct {
 	AccountID int
 	Period    string
 	Amount    int
-	Created   string
+	Created   sql.NullString
 }
 
 // CustomerPtrRecv declares TableName with a pointer receiver.

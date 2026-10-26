@@ -261,14 +261,23 @@ func TestModelQuery_Upsert(t *testing.T) {
 
 	{
 		// selected fields only: the others keep their values
-		customer := Customer{ID: 3, Email: "ignored@example.com", Name: "only-name"}
-		if assert.Nil(t, db.Model(&customer).Upsert("Name")) {
+		customer := Customer{ID: 3, Email: "new3@example.com", Name: "only-name", Status: 9}
+		if assert.Nil(t, db.Model(&customer).Upsert("Name", "Email")) {
 			var c Customer
 			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"id": 3}).One(&c))
 			assert.Equal(t, "only-name", c.Name)
-			assert.Equal(t, "user3@example.com", c.Email)
+			assert.Equal(t, "new3@example.com", c.Email)
 			assert.Equal(t, 2, c.Status)
+			assert.Equal(t, "address3", c.Address.String)
 		}
+
+		// the insert part must be valid on its own, even for an existing row: leaving out the
+		// NOT NULL column email (no default) fails in strict mode, and the row is unchanged
+		customer = Customer{ID: 3, Name: "no-email"}
+		assert.NotNil(t, db.Model(&customer).Upsert("Name"))
+		var c Customer
+		assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"id": 3}).One(&c))
+		assert.Equal(t, "only-name", c.Name)
 	}
 
 	{
@@ -287,9 +296,9 @@ func TestModelQuery_Upsert(t *testing.T) {
 
 	{
 		// composite unique key + Exclude: excluded fields are neither inserted nor updated
-		period := AccountPeriod{AccountID: 1, Period: "2026-10", Amount: 20, Created: "c2"}
+		period := AccountPeriod{AccountID: 1, Period: "2026-10", Amount: 20, Created: sql.NullString{String: "c2", Valid: true}}
 		assert.Nil(t, db.Model(&period).Exclude("Created").Upsert())
-		period = AccountPeriod{AccountID: 1, Period: "2026-09", Amount: 30, Created: "c3"}
+		period = AccountPeriod{AccountID: 1, Period: "2026-09", Amount: 30, Created: sql.NullString{String: "c3", Valid: true}}
 		assert.Nil(t, db.Model(&period).Exclude("Created").Upsert())
 
 		var p []AccountPeriod
@@ -298,10 +307,11 @@ func TestModelQuery_Upsert(t *testing.T) {
 			assert.Equal(t, "2026-09", p[0].Period)
 			assert.Equal(t, 1, p[0].ID)
 			assert.Equal(t, 30, p[0].Amount)
-			assert.Equal(t, "c1", p[0].Created)
+			assert.Equal(t, "c1", p[0].Created.String)
 			assert.Equal(t, "2026-10", p[1].Period)
 			assert.Equal(t, 20, p[1].Amount)
-			assert.Equal(t, "", p[1].Created)
+			// the excluded column was not inserted either
+			assert.False(t, p[1].Created.Valid)
 		}
 	}
 
