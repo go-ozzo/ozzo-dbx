@@ -780,9 +780,10 @@ err := db.Transactional(func(tx *dbx.Tx) error {
 
 Row locks only exist inside a transaction: outside one, every statement commits at once and its locks are released
 immediately. That is why a locking read must run on a `Tx`: built from a `DB` (`db.Select()...ForUpdate()`), the query
-returns an error instead of executing. A locking read also cannot be combined with `Union()`, `GroupBy()` or
+returns an error instead of executing, on every database, SQLite included, so that a test suite running on SQLite
+catches a lock taken outside a transaction. A locking read also cannot be combined with `Union()`, `GroupBy()` or
 `Distinct()` (the query returns an error), and should not use aggregate functions. SQLite has no row locks (a write
-transaction locks the whole database), so the locking clause is left out for SQLite, inside a transaction or not.
+transaction locks the whole database), so inside a transaction the locking clause is left out for SQLite.
 SQL Server and Oracle are not supported and return an error.
 
 ## Logging Executed SQL Statements
