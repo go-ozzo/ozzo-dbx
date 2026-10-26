@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `ModelQuery.Upsert(attrs...)`: inserts a model or updates the row with the same primary key, on MySQL, PostgreSQL and SQLite ([#95](https://github.com/go-ozzo/ozzo-dbx/issues/95)). Fields are chosen as for `Insert()`/`Update()`; fields passed to `Exclude()` are neither inserted nor updated; the primary key is never updated; a zero single-column primary key is left out of the insertion (auto-increment). The primary key field is not filled after the call
+- `Upsert()` for SQLite (`INSERT ... ON CONFLICT (...) DO UPDATE SET ...`, SQLite 3.24.0+)
+- Locking reads: `SelectQuery.ForUpdate()`, `ForShare()` and `ForUpdateSkipLocked()` append `FOR UPDATE`, `FOR SHARE` or `FOR UPDATE SKIP LOCKED` after `ORDER BY`/`LIMIT`/`OFFSET`. A locking read must be built from a transaction (`tx.Select()`): from a `DB` the query returns an error, since the lock would be released as soon as the statement ends. Left out for SQLite (no row locks); an error for SQL Server and Oracle, and when combined with `Union()`, `GroupBy()` or `Distinct()`. Optional `LockQueryBuilder` interface for custom query builders (not added to `QueryBuilder`, so existing implementations keep compiling)
+
+### Fixed
+- MySQL `Upsert()` executed a plain `INSERT`: the `ON DUPLICATE KEY UPDATE` clause and its parameters were shown by `SQL()` but never sent to the server, so an existing key failed with a duplicate-key error (the same bug was fixed for PostgreSQL in [#70](https://github.com/go-ozzo/ozzo-dbx/pull/70))
+- PostgreSQL `Upsert()` without constraint columns generated `ON CONFLICT DO UPDATE` without a conflict target, which PostgreSQL rejects; it now returns an error before executing (SQLite likewise)
+- `Upsert()` with no column left to update besides the constraint columns generated an empty update clause; it now returns an error before executing
+- `GetTableName()` (the default `DB.TableMapper`) ignored a `TableName()` method with a pointer receiver when given a struct value or a slice of struct values, e.g. `db.Select().All(&[]Customer{})` without `From()`, and fell back to the snake-case type name. Code that relied on the fallback name will now query the table returned by `TableName()`
+
+### Changed
+- `Upsert()` leaves the constraint columns out of the update part on every database. On MySQL `constraints` was ignored before: now a row matched through another unique index keeps its own values in the constraint columns (e.g. its primary key). On PostgreSQL the conflict columns were assigned their own values, a no-op except for `UPDATE OF` triggers and case-insensitive collations
+
 ## [1.6.0] - 2026-09-03
 
 ### Added
