@@ -6,6 +6,8 @@ package dbx
 
 import (
 	"context"
+	gosql "database/sql"
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -33,6 +35,7 @@ type SelectQuery struct {
 	union        []UnionInfo
 	limit        int64
 	offset       int64
+	lock         string
 	params       Params
 }
 
@@ -227,6 +230,68 @@ func (s *SelectQuery) Offset(offset int64) *SelectQuery {
 	return s
 }
 
+// ForUpdate makes the query a locking read: FOR UPDATE locks the selected rows exclusively until
+// the end of the transaction. The clause is placed after ORDER BY, LIMIT and OFFSET.
+//
+// Row locks exist only inside a transaction: outside one, the statement commits at once and the
+// lock is released immediately. So a locking read must be built from a Tx (tx.Select()); built
+// from a DB, whose executor is a *sql.DB, Build sets LastError. A locking read cannot be combined
+// with UNION, GROUP BY or DISTINCT (Build sets LastError); avoid aggregate functions too.
+// SQLite has no row locks (a write transaction locks the whole database), so the clause is left
+// out there. SQL Server and Oracle are not supported (Build sets LastError).
+// Of ForUpdate, ForShare and ForUpdateSkipLocked, the last one called wins.
+func (s *SelectQuery) ForUpdate() *SelectQuery {
+	s.lock = "FOR UPDATE"
+	return s
+}
+
+// ForShare makes the query a locking read with FOR SHARE: the selected rows are locked in shared
+// mode until the end of the transaction, so other transactions can read but not modify them.
+// It requires MySQL 8.0+ or PostgreSQL; MySQL 5.7 and MariaDB do not support FOR SHARE.
+// See ForUpdate for the rules that apply to all locking reads.
+func (s *SelectQuery) ForShare() *SelectQuery {
+	s.lock = "FOR SHARE"
+	return s
+}
+
+// ForUpdateSkipLocked makes the query a locking read with FOR UPDATE SKIP LOCKED: like ForUpdate,
+// but rows locked by other transactions are skipped instead of waited for. It is meant for job
+// queues, where each worker claims rows the others have not taken.
+// It requires MySQL 8.0+ or PostgreSQL 9.5+. See ForUpdate for the rules that apply to all
+// locking reads.
+func (s *SelectQuery) ForUpdateSkipLocked() *SelectQuery {
+	s.lock = "FOR UPDATE SKIP LOCKED"
+	return s
+}
+
+// buildLock appends the locking clause to sql, the SELECT statement with its ORDER BY and LIMIT.
+func (s *SelectQuery) buildLock(qb QueryBuilder, sql string) (string, error) {
+	// PostgreSQL rejects these combinations; one rule for every database keeps queries portable
+	switch {
+	case len(s.union) > 0:
+		return sql, errors.New("a locking read cannot be combined with UNION")
+	case len(s.groupBy) > 0:
+		return sql, errors.New("a locking read cannot be combined with GROUP BY")
+	case s.distinct:
+		return sql, errors.New("a locking read cannot be combined with DISTINCT")
+	}
+	if _, ok := s.builder.(*SqliteBuilder); ok {
+		return sql, nil
+	}
+	// outside a transaction the lock is released as soon as the statement ends; only a plain
+	// *sql.DB is rejected, so custom or instrumented executors never get a false positive
+	if eb, ok := s.builder.(interface{ Executor() Executor }); ok {
+		if _, ok := eb.Executor().(*gosql.DB); ok {
+			return sql, errors.New("ForUpdate/ForShare/ForUpdateSkipLocked require a transaction")
+		}
+	}
+	lqb, ok := qb.(LockQueryBuilder)
+	if !ok {
+		return sql, fmt.Errorf("the query builder %T does not support locking reads", qb)
+	}
+	return lqb.BuildLock(sql, s.lock)
+}
+
 // Bind specifies the parameter values to be bound to the query.
 func (s *SelectQuery) Bind(params Params) *SelectQuery {
 	s.params = params
@@ -273,11 +338,19 @@ func (s *SelectQuery) Build() *Query {
 		}
 	}
 	sql = qb.BuildOrderByAndLimit(sql, s.orderBy, s.limit, s.offset)
+	var lockErr error
+	if s.lock != "" {
+		sql, lockErr = s.buildLock(qb, sql)
+	}
 	if union := qb.BuildUnion(s.union, params); union != "" {
 		sql = fmt.Sprintf("(%v) %v", sql, union)
 	}
 
-	return s.builder.NewQuery(sql).Bind(params)
+	q := s.builder.NewQuery(sql).Bind(params)
+	if lockErr != nil {
+		q.LastError = lockErr
+	}
+	return q
 }
 
 // One executes the SELECT query and populates the first row of the result into the specified variable.

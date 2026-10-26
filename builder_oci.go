@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -69,6 +70,12 @@ func (b *OciBuilder) AlterColumn(table, col, typ string) *Query {
 	col = b.db.QuoteColumnName(col)
 	sql := fmt.Sprintf("ALTER TABLE %v MODIFY %v %v", b.db.QuoteTableName(table), col, typ)
 	return b.NewQuery(sql)
+}
+
+// BuildLock returns an error: the locking reads are not supported for Oracle, whose LIMIT and
+// OFFSET are emulated by wrapping the query, and which has no FOR SHARE.
+func (q *OciQueryBuilder) BuildLock(sql string, lock string) (string, error) {
+	return sql, errors.New("locking reads (" + lock + ") are not supported for Oracle")
 }
 
 // BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.

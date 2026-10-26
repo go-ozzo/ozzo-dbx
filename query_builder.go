@@ -31,12 +31,26 @@ type QueryBuilder interface {
 	BuildUnion([]UnionInfo, Params) string
 }
 
+// LockQueryBuilder is an optional interface of a QueryBuilder that supports the locking reads of
+// SelectQuery (ForUpdate, ForShare and ForUpdateSkipLocked). It is not part of QueryBuilder, so
+// that QueryBuilder implementations outside this package keep compiling. SelectQuery.Build sets
+// LastError for a locking read if the query builder does not implement it.
+type LockQueryBuilder interface {
+	// BuildLock appends the locking clause ("FOR UPDATE", "FOR SHARE" or "FOR UPDATE SKIP LOCKED")
+	// to sql, a SELECT statement that already includes its ORDER BY and LIMIT clauses.
+	// It returns an error if the database does not support the lock.
+	BuildLock(sql string, lock string) (string, error)
+}
+
 // BaseQueryBuilder provides a basic implementation of QueryBuilder.
 type BaseQueryBuilder struct {
 	db *DB
 }
 
-var _ QueryBuilder = &BaseQueryBuilder{}
+var (
+	_ QueryBuilder     = &BaseQueryBuilder{}
+	_ LockQueryBuilder = &BaseQueryBuilder{}
+)
 
 // NewBaseQueryBuilder creates a new BaseQueryBuilder instance.
 func NewBaseQueryBuilder(db *DB) *BaseQueryBuilder {
@@ -166,6 +180,11 @@ func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit
 		return sql + " " + limit
 	}
 	return sql
+}
+
+// BuildLock appends the locking clause of a locking read to the SELECT statement.
+func (q *BaseQueryBuilder) BuildLock(sql string, lock string) (string, error) {
+	return sql + " " + lock, nil
 }
 
 // BuildUnion generates a UNION clause from the given union information.
