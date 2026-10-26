@@ -467,10 +467,10 @@ err = db.Delete("users", dbx.HashExp{"status": 2}).Execute()
 ```go
 // MySQL:
 // INSERT INTO `users` (`email`, `id`, `name`) VALUES ({:p0}, {:p1}, {:p2})
-//   ON DUPLICATE KEY UPDATE `email`={:p3}, `name`={:p4}
+//   ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `name`=VALUES(`name`)
 // PostgreSQL:
 // INSERT INTO "users" ("email", "id", "name") VALUES ({:p0}, {:p1}, {:p2})
-//   ON CONFLICT ("id") DO UPDATE SET "email"={:p3}, "name"={:p4}
+//   ON CONFLICT ("id") DO UPDATE SET "email"=EXCLUDED."email", "name"=EXCLUDED."name"
 _, err := db.Upsert("users", dbx.Params{
 	"id":    100,
 	"name":  "James",
@@ -482,8 +482,11 @@ _, err := db.Upsert("users", dbx.Params{
 независимо от переданных столбцов ограничения. `Execute()` запроса, который вернул `Upsert()`, завершается ошибкой,
 если кроме столбцов ограничения обновлять нечего, или если для PostgreSQL или SQLite столбцы ограничения не указаны.
 
-Каждое значение используется и во вставке, и в обновлении, включая значения `dbx.Expression`, поэтому счётчик вида
-`"hits": dbx.NewExp("hits + 1")` с `Upsert()` не работает. В любой базе `NULL` в столбце ограничения никогда
+Часть обновления копирует предложенную строку (`EXCLUDED.col` в PostgreSQL и SQLite, `VALUES(col)` в MySQL), поэтому
+она записывает ровно то, что записала бы вставка: срабатывают триггеры `BEFORE INSERT`, а значение `dbx.Expression`
+вычисляется один раз. Выражение, читающее существующую строку, например счётчик `"hits": dbx.NewExp("hits + 1")`, с
+`Upsert()` не работает. В MySQL `VALUES()` устарел начиная с 8.0.20 (предупреждение 1287), но это единственная форма,
+которая работает и в MySQL 5.7, 8 и 9, и в MariaDB. В любой базе `NULL` в столбце ограничения никогда
 не даёт конфликта (уникальные индексы считают NULL различными), поэтому такая строка всегда вставляется.
 
 ### Построение запросов для работы со схемой БД
@@ -645,7 +648,7 @@ err = db.Model(&customer).Exclude("Status").Update()
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
 // INSERT INTO customer (id, name, email, status) VALUES (100, 'example', 'test@example.com', 0)
-//   ON DUPLICATE KEY UPDATE name='example', email='test@example.com', status=0
+//   ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), status=VALUES(status)
 err := db.Model(&customer).Upsert()
 // вставить или обновить все публичные поля, кроме CreatedAt
 err = db.Model(&customer).Exclude("CreatedAt").Upsert()
