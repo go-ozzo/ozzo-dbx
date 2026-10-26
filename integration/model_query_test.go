@@ -230,3 +230,86 @@ func TestModelQuery_Delete(t *testing.T) {
 	var a int
 	assert.NotNil(t, db.Model(&a).Delete())
 }
+
+func TestModelQuery_Upsert(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	{
+		// PK-only table, existing PK: the row is updated
+		customer := Customer{ID: 2, Email: "upd@example.com", Name: "upd", Status: 7}
+		if assert.Nil(t, db.Model(&customer).Upsert()) {
+			var c Customer
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"id": 2}).One(&c))
+			assert.Equal(t, "upd@example.com", c.Email)
+			assert.Equal(t, "upd", c.Name)
+			assert.Equal(t, 7, c.Status)
+		}
+	}
+
+	{
+		// PK-only table, zero PK: a new row is inserted; the struct PK is not filled
+		customer := Customer{Email: "ins@example.com", Name: "ins"}
+		if assert.Nil(t, db.Model(&customer).Upsert()) {
+			assert.Equal(t, 0, customer.ID)
+			var c Customer
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"email": "ins@example.com"}).One(&c))
+			assert.Equal(t, 4, c.ID)
+			assert.Equal(t, "ins", c.Name)
+		}
+	}
+
+	{
+		// selected fields only: the others keep their values
+		customer := Customer{ID: 3, Email: "ignored@example.com", Name: "only-name"}
+		if assert.Nil(t, db.Model(&customer).Upsert("Name")) {
+			var c Customer
+			assert.Nil(t, db.Select().From("customer").Where(dbx.HashExp{"id": 3}).One(&c))
+			assert.Equal(t, "only-name", c.Name)
+			assert.Equal(t, "user3@example.com", c.Email)
+			assert.Equal(t, 2, c.Status)
+		}
+	}
+
+	{
+		// a unique key besides the PK: the existing row is updated and keeps its own PK
+		account := Account{ID: 99, Code: "A1", Name: "renamed", Created: "c2"}
+		if assert.Nil(t, db.Model(&account).Exclude("Created").Upsert()) {
+			var a []Account
+			assert.Nil(t, db.Select().From("account").All(&a))
+			if assert.Len(t, a, 1) {
+				assert.Equal(t, 1, a[0].ID)
+				assert.Equal(t, "renamed", a[0].Name)
+				assert.Equal(t, "c1", a[0].Created)
+			}
+		}
+	}
+
+	{
+		// composite unique key + Exclude: excluded fields are neither inserted nor updated
+		period := AccountPeriod{AccountID: 1, Period: "2026-10", Amount: 20, Created: "c2"}
+		assert.Nil(t, db.Model(&period).Exclude("Created").Upsert())
+		period = AccountPeriod{AccountID: 1, Period: "2026-09", Amount: 30, Created: "c3"}
+		assert.Nil(t, db.Model(&period).Exclude("Created").Upsert())
+
+		var p []AccountPeriod
+		assert.Nil(t, db.Select().From("account_period").OrderBy("period").All(&p))
+		if assert.Len(t, p, 2) {
+			assert.Equal(t, "2026-09", p[0].Period)
+			assert.Equal(t, 1, p[0].ID)
+			assert.Equal(t, 30, p[0].Amount)
+			assert.Equal(t, "c1", p[0].Created)
+			assert.Equal(t, "2026-10", p[1].Period)
+			assert.Equal(t, 20, p[1].Amount)
+			assert.Equal(t, "", p[1].Created)
+		}
+	}
+
+	{
+		// errors
+		assert.NotNil(t, db.Model(&Customer{ID: 1}).Upsert("ID"))
+		assert.Equal(t, dbx.MissingPKError, db.Model(&Item{Name: "x"}).Upsert())
+		var a int
+		assert.NotNil(t, db.Model(&a).Upsert())
+	}
+}
