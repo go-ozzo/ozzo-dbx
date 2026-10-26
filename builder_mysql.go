@@ -72,8 +72,12 @@ func (b *MysqlBuilder) QuoteSimpleColumnName(s string) string {
 // table, so constraints are optional. The constraint columns are left out of the update list, so
 // a row matched by another unique key keeps its own values in them (e.g. its primary key).
 // Upsert sets LastError if no column is left to update.
+//
+// The update part is "col=VALUES(col)". VALUES() is deprecated since MySQL 8.0.20 (warning 1287),
+// but it is the only form that works on MySQL 5.7, 8 and 9 and on MariaDB alike; the row alias
+// that replaces it needs MySQL 8.0.19+ and does not exist in MariaDB.
 func (b *MysqlBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
-	return b.upsert(table, cols, constraints, func(assignments string) string {
+	return b.upsert(table, cols, constraints, func(col string) string { return "VALUES(" + col + ")" }, func(assignments string) string {
 		return " ON DUPLICATE KEY UPDATE " + assignments
 	})
 }

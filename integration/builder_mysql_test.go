@@ -5,6 +5,7 @@ import (
 
 	dbx "github.com/go-ozzo/ozzo-dbx"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMysqlBuilder_RenameColumn(t *testing.T) {
@@ -76,4 +77,53 @@ func TestMysqlBuilder_UpsertNullConstraintColumn(t *testing.T) {
 	var n int
 	assert.Nil(t, db.Select("COUNT(*)").From("device").Row(&n))
 	assert.Equal(t, 2, n)
+}
+
+func TestMysqlBuilder_UpsertBeforeInsertTrigger(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	// contact has a BEFORE INSERT trigger that lower-cases email. The update part copies the
+	// proposed row, so the triggered value is stored on the update path too.
+	_, err := db.Insert("contact", dbx.Params{"id": 1, "email": "First@Example.com"}).Execute()
+	require.NoError(t, err)
+	_, err = db.Upsert("contact", dbx.Params{"id": 1, "email": "MIXED@Example.com"}, "id").Execute()
+	require.NoError(t, err)
+
+	var email string
+	require.NoError(t, db.Select("email").From("contact").Where(dbx.HashExp{"id": 1}).Row(&email))
+	assert.Equal(t, "mixed@example.com", email)
+}
+
+func TestMysqlBuilder_UpsertSingleEvaluation(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	// dbx_next_tag() counts its calls in a session variable; a transaction keeps one connection
+	_, err := db.NewQuery("DROP FUNCTION IF EXISTS dbx_next_tag").Execute()
+	require.NoError(t, err)
+	_, err = db.NewQuery("CREATE FUNCTION dbx_next_tag() RETURNS INT NOT DETERMINISTIC NO SQL " +
+		"BEGIN SET @dbx_calls = IFNULL(@dbx_calls, 0) + 1; RETURN @dbx_calls; END").Execute()
+	require.NoError(t, err)
+	defer func() { _, _ = db.NewQuery("DROP FUNCTION IF EXISTS dbx_next_tag").Execute() }()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	defer func() { _ = tx.Rollback() }()
+	_, err = tx.NewQuery("SET @dbx_calls = 0").Execute()
+	require.NoError(t, err)
+
+	// customer 1 exists: the expression is evaluated once and its value is stored
+	_, err = tx.Upsert("customer", dbx.Params{
+		"id":     1,
+		"email":  "user1@example.com",
+		"status": dbx.NewExp("dbx_next_tag()"),
+	}, "id").Execute()
+	require.NoError(t, err)
+
+	var calls, status int
+	require.NoError(t, tx.NewQuery("SELECT @dbx_calls").Row(&calls))
+	require.NoError(t, tx.Select("status").From("customer").Where(dbx.HashExp{"id": 1}).Row(&status))
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, 1, status)
 }

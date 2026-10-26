@@ -78,7 +78,7 @@ func (b *SqliteBuilder) Upsert(table string, cols Params, constraints ...string)
 		q.LastError = errors.New("Upsert requires the conflict target columns (constraints) on SQLite")
 		return q
 	}
-	return b.upsert(table, cols, constraints, func(assignments string) string {
+	return b.upsert(table, cols, constraints, func(col string) string { return "EXCLUDED." + col }, func(assignments string) string {
 		return " ON CONFLICT (" + b.quoteColumns(constraints) + ") DO UPDATE SET " + assignments
 	})
 }

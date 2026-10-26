@@ -34,9 +34,10 @@ func TestSqliteBuilder_Upsert(t *testing.T) {
 		"name": "James",
 		"age":  30,
 	}, "id")
-	assert.Equal(t, "INSERT INTO `users` (`age`, `id`, `name`) VALUES ({:p0}, {:p1}, {:p2}) ON CONFLICT (`id`) DO UPDATE SET `age`={:p3}, `name`={:p4}", q.SQL(), "t1")
-	assert.Equal(t, "INSERT INTO `users` (`age`, `id`, `name`) VALUES (?, ?, ?) ON CONFLICT (`id`) DO UPDATE SET `age`=?, `name`=?", q.rawSQL, "t2")
-	assert.Equal(t, Params{"p0": 30, "p1": 1, "p2": "James", "p3": 30, "p4": "James"}, q.Params(), "t3")
+	assert.Equal(t, "INSERT INTO `users` (`age`, `id`, `name`) VALUES ({:p0}, {:p1}, {:p2}) ON CONFLICT (`id`) DO UPDATE SET `age`=EXCLUDED.`age`, `name`=EXCLUDED.`name`", q.SQL(), "t1")
+	assert.Equal(t, "INSERT INTO `users` (`age`, `id`, `name`) VALUES (?, ?, ?) ON CONFLICT (`id`) DO UPDATE SET `age`=EXCLUDED.`age`, `name`=EXCLUDED.`name`", q.rawSQL, "t2")
+	assert.Equal(t, Params{"p0": 30, "p1": 1, "p2": "James"}, q.Params(), "t3")
+	assert.Equal(t, []string{"p0", "p1", "p2"}, q.placeholders, "t3b")
 	assert.Nil(t, q.LastError, "t4")
 
 	// SQLite requires a conflict target for DO UPDATE

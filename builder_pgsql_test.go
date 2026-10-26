@@ -16,12 +16,11 @@ func TestPgsqlBuilder_Upsert(t *testing.T) {
 		"name": "James",
 		"age":  30,
 	}, "id")
-	assert.Equal(t, q.sql, `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "age"={:p2}, "name"={:p3}`, "t1")
-	assert.Equal(t, q.rawSQL, `INSERT INTO "users" ("age", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "age"=$3, "name"=$4`, "t2")
-	assert.Equal(t, q.Params()["p0"], 30, "t3")
-	assert.Equal(t, q.Params()["p1"], "James", "t4")
-	assert.Equal(t, q.Params()["p2"], 30, "t5")
-	assert.Equal(t, q.Params()["p3"], "James", "t6")
+	// the update part copies the proposed row (EXCLUDED), so each value is bound once
+	assert.Equal(t, `INSERT INTO "users" ("age", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "age"=EXCLUDED."age", "name"=EXCLUDED."name"`, q.sql, "t1")
+	assert.Equal(t, `INSERT INTO "users" ("age", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "age"=EXCLUDED."age", "name"=EXCLUDED."name"`, q.rawSQL, "t2")
+	assert.Equal(t, Params{"p0": 30, "p1": "James"}, q.Params(), "t3")
+	assert.Equal(t, []string{"p0", "p1"}, q.placeholders, "t4")
 	assert.Nil(t, q.LastError, "t7")
 }
 
@@ -33,8 +32,8 @@ func TestPgsqlBuilder_UpsertConstraints(t *testing.T) {
 		"id":   1,
 		"name": "James",
 	}, "id")
-	assert.Equal(t, `INSERT INTO "users" ("id", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "name"={:p2}`, q.SQL(), "t1")
-	assert.Equal(t, `INSERT INTO "users" ("id", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "name"=$3`, q.rawSQL, "t2")
+	assert.Equal(t, `INSERT INTO "users" ("id", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "name"=EXCLUDED."name"`, q.SQL(), "t1")
+	assert.Equal(t, `INSERT INTO "users" ("id", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "name"=EXCLUDED."name"`, q.rawSQL, "t2")
 	assert.Nil(t, q.LastError, "t3")
 
 	// PostgreSQL rejects ON CONFLICT DO UPDATE without a conflict target

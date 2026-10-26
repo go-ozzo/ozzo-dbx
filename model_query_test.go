@@ -83,14 +83,14 @@ func TestModelQuery_Upsert(t *testing.T) {
 		assert.Nil(t, b.Model(newCustomer(5)).Exclude("ID", "Created").Upsert())
 
 		assert.Equal(t, []string{
-			"INSERT INTO `customer` (`created`, `email`, `id`, `name`) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `created`=?, `email`=?, `name`=?",
-			"INSERT INTO `customer` (`email`, `id`, `name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `email`=?, `name`=?",
-			"INSERT INTO `customer` (`created`, `email`, `name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `created`=?, `email`=?, `name`=?",
-			"INSERT INTO `customer` (`id`, `name`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `name`=?",
-			"INSERT INTO `customer` (`email`, `id`, `name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `email`=?, `name`=?",
+			"INSERT INTO `customer` (`created`, `email`, `id`, `name`) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `created`=VALUES(`created`), `email`=VALUES(`email`), `name`=VALUES(`name`)",
+			"INSERT INTO `customer` (`email`, `id`, `name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `name`=VALUES(`name`)",
+			"INSERT INTO `customer` (`created`, `email`, `name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `created`=VALUES(`created`), `email`=VALUES(`email`), `name`=VALUES(`name`)",
+			"INSERT INTO `customer` (`id`, `name`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `name`=VALUES(`name`)",
+			"INSERT INTO `customer` (`email`, `id`, `name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `name`=VALUES(`name`)",
 		}, r.sql)
-		assert.Equal(t, []interface{}{"c", "e@example.com", 5, "n", "c", "e@example.com", "n"}, r.args[0])
-		assert.Equal(t, []interface{}{5, "n", "n"}, r.args[3])
+		assert.Equal(t, []interface{}{"c", "e@example.com", 5, "n"}, r.args[0])
+		assert.Equal(t, []interface{}{5, "n"}, r.args[3])
 	})
 
 	t.Run("pgsql", func(t *testing.T) {
@@ -99,10 +99,10 @@ func TestModelQuery_Upsert(t *testing.T) {
 		assert.Nil(t, b.Model(newCustomer(0)).Exclude("Created").Upsert())
 		assert.Nil(t, b.Model(&upsertOrderItem{OrderID: 1, ItemID: 0, Quantity: 3}).Upsert())
 		assert.Equal(t, []string{
-			`INSERT INTO "customer" ("email", "id", "name") VALUES ($1, $2, $3) ON CONFLICT ("id") DO UPDATE SET "email"=$4, "name"=$5`,
-			`INSERT INTO "customer" ("email", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "email"=$3, "name"=$4`,
+			`INSERT INTO "customer" ("email", "id", "name") VALUES ($1, $2, $3) ON CONFLICT ("id") DO UPDATE SET "email"=EXCLUDED."email", "name"=EXCLUDED."name"`,
+			`INSERT INTO "customer" ("email", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "email"=EXCLUDED."email", "name"=EXCLUDED."name"`,
 			// composite PK: all PK columns are the target, a zero value is kept
-			`INSERT INTO "upsert_order_item" ("item_id", "order_id", "quantity") VALUES ($1, $2, $3) ON CONFLICT ("item_id", "order_id") DO UPDATE SET "quantity"=$4`,
+			`INSERT INTO "upsert_order_item" ("item_id", "order_id", "quantity") VALUES ($1, $2, $3) ON CONFLICT ("item_id", "order_id") DO UPDATE SET "quantity"=EXCLUDED."quantity"`,
 		}, r.sql)
 	})
 
@@ -110,7 +110,7 @@ func TestModelQuery_Upsert(t *testing.T) {
 		b, r := newRecordingBuilder("sqlite", NewSqliteBuilder)
 		assert.Nil(t, b.Model(newCustomer(5)).Upsert("Name"))
 		assert.Equal(t, []string{
-			"INSERT INTO `customer` (`id`, `name`) VALUES (?, ?) ON CONFLICT (`id`) DO UPDATE SET `name`=?",
+			"INSERT INTO `customer` (`id`, `name`) VALUES (?, ?) ON CONFLICT (`id`) DO UPDATE SET `name`=EXCLUDED.`name`",
 		}, r.sql)
 	})
 

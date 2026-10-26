@@ -177,6 +177,7 @@ func (q *ModelQuery) Update(attrs ...string) error {
 // Upsert relies on Builder.Upsert, so it works on MySQL, PostgreSQL and SQLite and returns an error
 // on other databases. On MySQL the update also happens on a conflict with any other unique index of
 // the table: the matched row keeps its primary key, which then differs from the model's.
+// The update copies the proposed row (see Builder.Upsert), so BEFORE INSERT triggers apply to it.
 // Upsert returns an error if no field is left to update besides the primary key.
 //
 // The insertion part must be valid on its own even when the row already exists: the database

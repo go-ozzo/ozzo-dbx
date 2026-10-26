@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `Upsert()` leaves the constraint columns out of the update part on every database. On MySQL `constraints` was ignored before: now a row matched through another unique index keeps its own values in the constraint columns (e.g. its primary key). On PostgreSQL the conflict columns were assigned their own values, a no-op except for `UPDATE OF` triggers and case-insensitive collations
+- `Upsert()` (and `ModelQuery.Upsert()`) now update the existing row from the proposed row — `col=EXCLUDED.col` on PostgreSQL and SQLite, `col=VALUES(col)` on MySQL — instead of binding every value a second time. The update stores exactly what the insert would have stored, and each value is sent once. **PostgreSQL behaviour change:** `BEFORE INSERT` triggers now apply on the update path too (before, the update stored the values as passed), and an expression value such as `nextval(...)`, `random()` or a function with side effects is evaluated once instead of twice (before, the second evaluation was stored and a sequence lost a value). On MySQL, `VALUES()` is deprecated since 8.0.20 (warning 1287) but is the only form that works on MySQL 5.7, 8 and 9 and on MariaDB
 
 ## [1.6.0] - 2026-09-03
 
