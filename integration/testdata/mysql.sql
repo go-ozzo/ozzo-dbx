@@ -7,6 +7,7 @@
  * - database: ozzo_dbx_test
  */
 
+DROP TABLE IF EXISTS `contact` CASCADE;
 DROP TABLE IF EXISTS `device` CASCADE;
 DROP TABLE IF EXISTS `account_period` CASCADE;
 DROP TABLE IF EXISTS `account` CASCADE;
@@ -85,6 +86,14 @@ CREATE TABLE `device` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQ_device_serial` (`serial`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `contact` (
+  `id` int(11) NOT NULL,
+  `email` varchar(128) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TRIGGER `contact_bi` BEFORE INSERT ON `contact` FOR EACH ROW SET NEW.email = LOWER(NEW.email);
 
 INSERT INTO `customer` (email, name, address, status) VALUES ('user1@example.com', 'user1', 'address1', 1);
 INSERT INTO `customer` (email, name, address, status) VALUES ('user2@example.com', 'user2', NULL, 1);

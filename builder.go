@@ -52,8 +52,10 @@ type Builder interface {
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
 	//
-	// Each value is used in both the INSERT and the UPDATE part, Expression values included, so an
-	// expression that reads the existing row (e.g. "hits + 1") is not supported.
+	// The update part copies the proposed row (EXCLUDED.col on PostgreSQL and SQLite, VALUES(col) on
+	// MySQL), so it stores what the insert would have stored: BEFORE INSERT triggers apply, and an
+	// Expression value is evaluated once, in the insert part. An expression that reads the existing
+	// row (e.g. "hits + 1") is therefore not supported.
 	// On every database a NULL in a constraint column never conflicts (NULLs are distinct
 	// in unique indexes), so such a row is always inserted.
 	Upsert(table string, cols Params, constraints ...string) *Query
@@ -215,12 +217,16 @@ func (b *BaseBuilder) Upsert(table string, cols Params, constraints ...string) *
 }
 
 // upsert builds an INSERT statement for cols followed by the conflict clause returned by onConflict,
-// which receives the comma-separated "column=value" assignments of the update part.
+// which receives the comma-separated "column=<proposed value>" assignments of the update part.
+// proposed returns the dialect's reference to the proposed (rejected) row's value of a quoted column:
+// EXCLUDED.col on PostgreSQL and SQLite, VALUES(col) on MySQL. Copying the proposed row, rather than
+// binding each value a second time, makes the update store what the insert would have stored:
+// BEFORE INSERT triggers apply, and an Expression value is evaluated once.
 // Constraint columns are left out of the assignments: PostgreSQL and SQLite match the existing row
 // on them, so they already hold the incoming values; MySQL may match the row on another unique key,
 // and assigning them would rewrite that row's key (e.g. its primary key).
 // The query is rebuilt from the final SQL so that the executed statement includes the conflict clause.
-func (b *BaseBuilder) upsert(table string, cols Params, constraints []string, onConflict func(assignments string) string) *Query {
+func (b *BaseBuilder) upsert(table string, cols Params, constraints []string, proposed func(col string) string, onConflict func(assignments string) string) *Query {
 	q := b.Insert(table, cols)
 
 	skip := make(map[string]bool, len(constraints))
@@ -243,14 +249,8 @@ func (b *BaseBuilder) upsert(table string, cols Params, constraints []string, on
 
 	lines := make([]string, 0, len(names))
 	for _, name := range names {
-		value := cols[name]
-		name = b.db.QuoteColumnName(name)
-		if e, ok := value.(Expression); ok {
-			lines = append(lines, name+"="+e.Build(b.db, q.params))
-		} else {
-			lines = append(lines, fmt.Sprintf("%v={:p%v}", name, len(q.params)))
-			q.params[fmt.Sprintf("p%v", len(q.params))] = value
-		}
+		col := b.db.QuoteColumnName(name)
+		lines = append(lines, col+"="+proposed(col))
 	}
 
 	return b.NewQuery(q.sql + onConflict(strings.Join(lines, ", "))).Bind(q.params)
