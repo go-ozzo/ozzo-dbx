@@ -326,6 +326,11 @@ func (db *DB) newBuilder(executor Executor) Builder {
 	return builderFunc(db, executor)
 }
 
+// Unwrap returns the errors in the list, so that errors.Is and errors.As look at each of them.
+func (errs Errors) Unwrap() []error {
+	return errs
+}
+
 // Error returns the error string of Errors.
 func (errs Errors) Error() string {
 	var b bytes.Buffer

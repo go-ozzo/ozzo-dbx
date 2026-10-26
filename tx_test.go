@@ -144,3 +144,11 @@ func TestTransactional_EndedByCallback(t *testing.T) {
 		})
 	}
 }
+
+func TestErrors_Unwrap(t *testing.T) {
+	errF := errors.New("f failed")
+	err := error(Errors{errF, sql.ErrTxDone})
+	assert.ErrorIs(t, err, errF)
+	assert.ErrorIs(t, err, sql.ErrTxDone)
+	assert.Equal(t, "f failed\nsql: transaction has already been committed or rolled back", err.Error())
+}
