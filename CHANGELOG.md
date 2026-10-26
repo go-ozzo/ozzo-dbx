@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-26
+
 ### Added
 - `ModelQuery.Upsert(attrs...)`: inserts a model or updates the row with the same primary key, on MySQL, PostgreSQL and SQLite ([#95](https://github.com/go-ozzo/ozzo-dbx/issues/95)). Fields are chosen as for `Insert()`/`Update()`; fields passed to `Exclude()` are neither inserted nor updated; the primary key is never updated; a zero single-column primary key is left out of the insertion (auto-increment). The primary key field is not filled after the call
 - `Upsert()` for SQLite (`INSERT ... ON CONFLICT (...) DO UPDATE SET ...`, SQLite 3.24.0+)

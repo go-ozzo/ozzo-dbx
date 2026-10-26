@@ -1,8 +1,19 @@
 # Roadmap
 
-## Current State: v1.6.0
+## Current State: v1.7.0
 
-Revival release after 6 years of inactivity. Modernized codebase, clean dependency graph, enterprise-grade CI.
+Working upserts on MySQL, PostgreSQL and SQLite, model-level upsert, locking reads, and a transaction data-loss fix.
+
+## Completed (v1.7.0)
+
+- [x] `ModelQuery.Upsert()` — [#95](https://github.com/go-ozzo/ozzo-dbx/issues/95)
+- [x] MySQL `Upsert()` executes the full `ON DUPLICATE KEY UPDATE` statement; PostgreSQL/SQLite require a conflict target
+- [x] `Upsert()` for SQLite
+- [x] Locking reads: `ForUpdate()`, `ForShare()`, `ForUpdateSkipLocked()`
+- [x] `Transactional()` no longer reports success for a transaction rolled back by a canceled context
+- [x] SQLite `LIKE` escaping (`ESCAPE '\'`)
+- [x] Pointer-receiver `TableName()` honoured for values and slices
+- [x] `Errors.Unwrap()` for `errors.Is` / `errors.As`
 
 ## Completed (v1.6.0)
 
@@ -18,9 +29,8 @@ Revival release after 6 years of inactivity. Modernized codebase, clean dependen
 - [x] Review and merge community PRs (#106, #108)
 - [x] pgx `LastInsertId()` compatibility
 
-## Next (v1.7.0+)
+## Next (v1.8.0+)
 
-- [ ] Upsert support (ON CONFLICT / ON DUPLICATE KEY) — [#95](https://github.com/go-ozzo/ozzo-dbx/issues/95)
 - [ ] Subquery support (`SelectQuery` as `Expression`) — [#32](https://github.com/go-ozzo/ozzo-dbx/issues/32)
 - [ ] PostgreSQL and SQLite service containers in CI
 - [ ] Performance benchmarks
