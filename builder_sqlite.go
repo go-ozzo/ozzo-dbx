@@ -62,6 +62,27 @@ func (b *SqliteBuilder) QuoteSimpleColumnName(s string) string {
 	return "`" + s + "`"
 }
 
+// Upsert creates a Query that represents an UPSERT SQL statement.
+// Upsert inserts a row into the table if the primary key or unique index is not found.
+// Otherwise it will update the row with the new values.
+// The keys of cols are the column names, while the values of cols are the corresponding column
+// values to be inserted.
+//
+// The constraints are the conflict target columns (a primary key or unique index) and are required:
+// SQLite allows ON CONFLICT DO UPDATE only with a target, so Upsert sets LastError instead.
+// The constraint columns are left out of the update list. Upsert also sets LastError if no column
+// is left to update. Requires SQLite 3.24.0 or newer.
+func (b *SqliteBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
+	if len(constraints) == 0 {
+		q := b.NewQuery("")
+		q.LastError = errors.New("Upsert requires the conflict target columns (constraints) on SQLite")
+		return q
+	}
+	return b.upsert(table, cols, constraints, func(assignments string) string {
+		return " ON CONFLICT (" + b.quoteColumns(constraints) + ") DO UPDATE SET " + assignments
+	})
+}
+
 // DropIndex creates a Query that can be used to remove the named index from a table.
 func (b *SqliteBuilder) DropIndex(table, name string) *Query {
 	sql := fmt.Sprintf("DROP INDEX %v", b.db.QuoteColumnName(name))

@@ -27,6 +27,27 @@ func TestSqliteBuilder_QuoteSimpleColumnName(t *testing.T) {
 	assert.Equal(t, b.QuoteSimpleColumnName(`*`), `*`, "t5")
 }
 
+func TestSqliteBuilder_Upsert(t *testing.T) {
+	b := getSqliteBuilder()
+	q := b.Upsert("users", Params{
+		"id":   1,
+		"name": "James",
+		"age":  30,
+	}, "id")
+	assert.Equal(t, "INSERT INTO `users` (`age`, `id`, `name`) VALUES ({:p0}, {:p1}, {:p2}) ON CONFLICT (`id`) DO UPDATE SET `age`={:p3}, `name`={:p4}", q.SQL(), "t1")
+	assert.Equal(t, "INSERT INTO `users` (`age`, `id`, `name`) VALUES (?, ?, ?) ON CONFLICT (`id`) DO UPDATE SET `age`=?, `name`=?", q.rawSQL, "t2")
+	assert.Equal(t, Params{"p0": 30, "p1": 1, "p2": "James", "p3": 30, "p4": "James"}, q.Params(), "t3")
+	assert.Nil(t, q.LastError, "t4")
+
+	// SQLite requires a conflict target for DO UPDATE
+	q = b.Upsert("users", Params{"name": "James"})
+	assert.NotNil(t, q.LastError, "t5")
+
+	// nothing to update besides the conflict columns
+	q = b.Upsert("users", Params{"id": 1}, "id")
+	assert.NotNil(t, q.LastError, "t6")
+}
+
 func TestSqliteBuilder_DropIndex(t *testing.T) {
 	b := getSqliteBuilder()
 	q := b.DropIndex("users", "idx")
