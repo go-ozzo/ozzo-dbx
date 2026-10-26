@@ -87,6 +87,48 @@ jobs:
           flags: integration
           name: codecov-ozzo-dbx-integration
 
+  # Canary on the newest MySQL release (floating "innovation" tag). Not a required check: it exists
+  # to show early when a newer server breaks something we rely on, e.g. VALUES() in
+  # ON DUPLICATE KEY UPDATE, deprecated since MySQL 8.0.20.
+  test-integration-mysql-latest:
+    name: Integration Tests - MySQL innovation (canary)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:innovation
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: ozzo_dbx_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h 127.0.0.1 --silent; do
+            sleep 1
+          done
+          mysql -h 127.0.0.1 -u root -e "SELECT VERSION()"
+
+      - name: Test
+        working-directory: integration
+        env:
+          DBX_MYSQL_DSN: "root:@tcp(127.0.0.1:3306)/ozzo_dbx_test?parseTime=true"
+        run: go test -race ./...
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
