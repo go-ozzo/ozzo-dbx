@@ -421,6 +421,8 @@ Note that if the value range is empty, it will generate an expression representi
 * `dbx.Like()`: creating a `LIKE` expression for the specified column and the range of values. For example, 
 `dbx.Like("title", "golang", "framework")` would create the expression `title LIKE "%golang%" AND title LIKE "%framework%"`.
 You can further customize a LIKE expression by calling `Escape()` and/or `Match()` functions of the resulting expression.
+By default `%`, `_` and `\` in the values are escaped with a backslash (on SQLite an `ESCAPE '\'` clause is added).
+`Escape()` with no arguments turns escaping off, so `_` and `%` in the values act as wildcards.
 Note that if the value range is empty, it will generate an empty expression. 
 * `dbx.NotLike()`: creating a `NOT LIKE` expression. This is very similar to `dbx.Like()`.
 * `dbx.OrLike()`: creating a `LIKE` expression but concatenating different `LIKE` sub-expressions using `OR` instead of `AND`.
