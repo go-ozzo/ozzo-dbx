@@ -328,5 +328,12 @@ func GetTableName(a interface{}) string {
 	if t.Kind() == reflect.Slice {
 		return GetTableName(reflect.Zero(t.Elem()).Interface())
 	}
+	// a struct value (passed as is or as a slice element) whose TableName has a pointer receiver:
+	// call it on a new zero value, never on a nil pointer
+	if reflect.PointerTo(t).Implements(tableModelType) {
+		return reflect.New(t).Interface().(TableModel).TableName()
+	}
 	return DefaultFieldMapFunc(t.Name())
 }
+
+var tableModelType = reflect.TypeOf((*TableModel)(nil)).Elem()

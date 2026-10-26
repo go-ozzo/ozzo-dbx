@@ -107,3 +107,18 @@ func TestSelectQuery_Model(t *testing.T) {
 		assert.Equal(t, dbx.CompositePKError, err)
 	}
 }
+
+func TestSelectQuery_TableNamePointerReceiver(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	// no From(): the table name comes from the pointer-receiver TableName() for values and slices
+	var customers []CustomerPtrRecv
+	if assert.Nil(t, db.Select().OrderBy("id").All(&customers)) {
+		assert.Len(t, customers, 3)
+	}
+	var c CustomerPtrRecv
+	if assert.Nil(t, db.Select().Where(dbx.HashExp{"id": 2}).One(&c)) {
+		assert.Equal(t, "user2", c.Name)
+	}
+}
