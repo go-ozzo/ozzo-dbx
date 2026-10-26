@@ -62,3 +62,18 @@ func TestMysqlBuilder_Upsert(t *testing.T) {
 	_, err = db.Upsert("account", dbx.Params{"id": 1}, "id").Execute()
 	assert.NotNil(t, err)
 }
+
+func TestMysqlBuilder_UpsertNullConstraintColumn(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	// a UNIQUE index allows several NULLs, so a NULL in the constraint column never conflicts:
+	// both upserts insert a row
+	for i := 0; i < 2; i++ {
+		_, err := db.Upsert("device", dbx.Params{"serial": nil, "name": "unnamed"}, "serial").Execute()
+		assert.Nil(t, err)
+	}
+	var n int
+	assert.Nil(t, db.Select("COUNT(*)").From("device").Row(&n))
+	assert.Equal(t, 2, n)
+}
