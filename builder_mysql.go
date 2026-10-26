@@ -7,7 +7,6 @@ package dbx
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -68,30 +67,15 @@ func (b *MysqlBuilder) QuoteSimpleColumnName(s string) string {
 // Otherwise it will update the row with the new values.
 // The keys of cols are the column names, while the values of cols are the corresponding column
 // values to be inserted.
+//
+// MySQL's ON DUPLICATE KEY UPDATE fires on a conflict with ANY primary key or unique index of the
+// table, so constraints are optional. The constraint columns are left out of the update list, so
+// a row matched by another unique key keeps its own values in them (e.g. its primary key).
+// Upsert sets LastError if no column is left to update.
 func (b *MysqlBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
-	q := b.Insert(table, cols)
-
-	names := []string{}
-	for name := range cols {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	lines := []string{}
-	for _, name := range names {
-		value := cols[name]
-		name = b.db.QuoteColumnName(name)
-		if e, ok := value.(Expression); ok {
-			lines = append(lines, name+"="+e.Build(b.db, q.params))
-		} else {
-			lines = append(lines, fmt.Sprintf("%v={:p%v}", name, len(q.params)))
-			q.params[fmt.Sprintf("p%v", len(q.params))] = value
-		}
-	}
-
-	q.sql += " ON DUPLICATE KEY UPDATE " + strings.Join(lines, ", ")
-
-	return q
+	return b.upsert(table, cols, constraints, func(assignments string) string {
+		return " ON DUPLICATE KEY UPDATE " + assignments
+	})
 }
 
 var mysqlColumnRegexp = regexp.MustCompile("(?m)^\\s*[`\"](.*?)[`\"]\\s+(.*?),?$")

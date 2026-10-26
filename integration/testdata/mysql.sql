@@ -7,6 +7,8 @@
  * - database: ozzo_dbx_test
  */
 
+DROP TABLE IF EXISTS `account_period` CASCADE;
+DROP TABLE IF EXISTS `account` CASCADE;
 DROP TABLE IF EXISTS `order_item` CASCADE;
 DROP TABLE IF EXISTS `item` CASCADE;
 DROP TABLE IF EXISTS `order` CASCADE;
@@ -56,6 +58,25 @@ CREATE TABLE `order_item` (
   CONSTRAINT `FK_order_item_item_id` FOREIGN KEY (`item_id`) REFERENCES `item` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `account` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `name` varchar(128),
+  `created` varchar(32),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UQ_account_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `account_period` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) NOT NULL,
+  `period` varchar(16) NOT NULL,
+  `amount` int(11) NOT NULL,
+  `created` varchar(32),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UQ_account_period` (`account_id`, `period`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 INSERT INTO `customer` (email, name, address, status) VALUES ('user1@example.com', 'user1', 'address1', 1);
 INSERT INTO `customer` (email, name, address, status) VALUES ('user2@example.com', 'user2', NULL, 1);
 INSERT INTO `customer` (email, name, address, status) VALUES ('user3@example.com', 'user3', 'address3', 2);
@@ -79,3 +100,6 @@ INSERT INTO `order_item` (order_id, item_id, quantity, subtotal) VALUES (2, 4, 1
 INSERT INTO `order_item` (order_id, item_id, quantity, subtotal) VALUES (2, 5, 1, 15.0);
 INSERT INTO `order_item` (order_id, item_id, quantity, subtotal) VALUES (2, 3, 1, 8.0);
 INSERT INTO `order_item` (order_id, item_id, quantity, subtotal) VALUES (3, 2, 1, 40.0);
+
+INSERT INTO `account` (code, name, created) VALUES ('A1', 'account1', 'c1');
+INSERT INTO `account_period` (account_id, period, amount, created) VALUES (1, '2026-09', 10, 'c1');

@@ -71,3 +71,29 @@ type Item struct {
 	ID2  int
 	Name string
 }
+
+type Account struct {
+	ID      int
+	Code    string
+	Name    string
+	Created string
+}
+
+type AccountPeriod struct {
+	ID        int
+	AccountID int
+	Period    string
+	Amount    int
+	Created   string
+}
+
+// CustomerPtrRecv declares TableName with a pointer receiver.
+type CustomerPtrRecv struct {
+	ID    int
+	Email string
+	Name  string
+}
+
+func (m *CustomerPtrRecv) TableName() string {
+	return "customer"
+}

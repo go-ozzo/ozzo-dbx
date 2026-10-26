@@ -209,6 +209,48 @@ func (b *BaseBuilder) Upsert(table string, cols Params, constraints ...string) *
 	return q
 }
 
+// upsert builds an INSERT statement for cols followed by the conflict clause returned by onConflict,
+// which receives the comma-separated "column=value" assignments of the update part.
+// Constraint columns are left out of the assignments: PostgreSQL and SQLite match the existing row
+// on them, so they already hold the incoming values; MySQL may match the row on another unique key,
+// and assigning them would rewrite that row's key (e.g. its primary key).
+// The query is rebuilt from the final SQL so that the executed statement includes the conflict clause.
+func (b *BaseBuilder) upsert(table string, cols Params, constraints []string, onConflict func(assignments string) string) *Query {
+	q := b.Insert(table, cols)
+
+	skip := make(map[string]bool, len(constraints))
+	for _, name := range constraints {
+		skip[name] = true
+	}
+	names := make([]string, 0, len(cols))
+	for name := range cols {
+		if !skip[name] {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+
+	if len(names) == 0 {
+		q = b.NewQuery(q.sql)
+		q.LastError = errors.New("Upsert requires at least one column to update besides the constraint columns")
+		return q
+	}
+
+	lines := make([]string, 0, len(names))
+	for _, name := range names {
+		value := cols[name]
+		name = b.db.QuoteColumnName(name)
+		if e, ok := value.(Expression); ok {
+			lines = append(lines, name+"="+e.Build(b.db, q.params))
+		} else {
+			lines = append(lines, fmt.Sprintf("%v={:p%v}", name, len(q.params)))
+			q.params[fmt.Sprintf("p%v", len(q.params))] = value
+		}
+	}
+
+	return b.NewQuery(q.sql + onConflict(strings.Join(lines, ", "))).Bind(q.params)
+}
+
 // Update creates a Query that represents an UPDATE SQL statement.
 // The keys of cols are the column names, while the values of cols are the corresponding new column
 // values. If the "where" expression is nil, the UPDATE SQL statement will have no WHERE clause

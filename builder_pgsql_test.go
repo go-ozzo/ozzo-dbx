@@ -22,6 +22,28 @@ func TestPgsqlBuilder_Upsert(t *testing.T) {
 	assert.Equal(t, q.Params()["p1"], "James", "t4")
 	assert.Equal(t, q.Params()["p2"], 30, "t5")
 	assert.Equal(t, q.Params()["p3"], "James", "t6")
+	assert.Nil(t, q.LastError, "t7")
+}
+
+func TestPgsqlBuilder_UpsertConstraints(t *testing.T) {
+	b := getPgsqlBuilder()
+
+	// conflict columns are left out of the update list
+	q := b.Upsert("users", Params{
+		"id":   1,
+		"name": "James",
+	}, "id")
+	assert.Equal(t, `INSERT INTO "users" ("id", "name") VALUES ({:p0}, {:p1}) ON CONFLICT ("id") DO UPDATE SET "name"={:p2}`, q.SQL(), "t1")
+	assert.Equal(t, `INSERT INTO "users" ("id", "name") VALUES ($1, $2) ON CONFLICT ("id") DO UPDATE SET "name"=$3`, q.rawSQL, "t2")
+	assert.Nil(t, q.LastError, "t3")
+
+	// PostgreSQL rejects ON CONFLICT DO UPDATE without a conflict target
+	q = b.Upsert("users", Params{"name": "James"})
+	assert.NotNil(t, q.LastError, "t4")
+
+	// nothing to update besides the conflict columns
+	q = b.Upsert("users", Params{"id": 1}, "id")
+	assert.NotNil(t, q.LastError, "t5")
 }
 func TestPgsqlBuilder_DropIndex(t *testing.T) {
 	b := getPgsqlBuilder()
