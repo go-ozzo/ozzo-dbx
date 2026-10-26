@@ -144,6 +144,46 @@ func TestGetTableName(t *testing.T) {
 	assert.Equal(t, "", GetTableName(c8))
 }
 
+type tableNamePtrRecv struct{ Name string }
+
+// TableName reads a field to prove it is never called on a nil pointer.
+func (m *tableNamePtrRecv) TableName() string { return "ptr_table" + m.Name }
+
+type tableNameValRecv struct{}
+
+func (tableNameValRecv) TableName() string { return "val_table" }
+
+func TestGetTableName_Receiver(t *testing.T) {
+	tests := []struct {
+		name  string
+		model interface{}
+		want  string
+	}{
+		{"ptr recv: T", tableNamePtrRecv{}, "ptr_table"},
+		{"ptr recv: *T", &tableNamePtrRecv{}, "ptr_table"},
+		{"ptr recv: nil *T", (*tableNamePtrRecv)(nil), "ptr_table"},
+		{"ptr recv: []T", []tableNamePtrRecv{}, "ptr_table"},
+		{"ptr recv: *[]T", &[]tableNamePtrRecv{}, "ptr_table"},
+		{"ptr recv: []*T", []*tableNamePtrRecv{}, "ptr_table"},
+		{"ptr recv: *[]*T", &[]*tableNamePtrRecv{}, "ptr_table"},
+		{"val recv: T", tableNameValRecv{}, "val_table"},
+		{"val recv: *T", &tableNameValRecv{}, "val_table"},
+		{"val recv: nil *T", (*tableNameValRecv)(nil), "val_table"},
+		{"val recv: []T", []tableNameValRecv{}, "val_table"},
+		{"val recv: *[]T", &[]tableNameValRecv{}, "val_table"},
+		{"val recv: []*T", []*tableNameValRecv{}, "val_table"},
+		{"val recv: *[]*T", &[]*tableNameValRecv{}, "val_table"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, GetTableName(tt.model))
+		})
+	}
+
+	// a non-empty value is passed to TableName as is
+	assert.Equal(t, "ptr_tableX", GetTableName(&tableNamePtrRecv{Name: "X"}))
+}
+
 type FA struct {
 	A1 string
 	A2 int
