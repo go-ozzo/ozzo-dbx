@@ -91,24 +91,28 @@ func TestSelectQuery_Lock(t *testing.T) {
 		})
 	}
 
-	// SQLite has no row locks: the lock is silently left out, inside a transaction or not
+	// SQLite has no row locks: inside a transaction the lock is silently left out
 	for _, driver := range []string{"sqlite", "sqlite3"} {
-		for _, b := range []Builder{NewFromDB(nil, driver), txOn(driver)} {
-			for _, sq := range []*SelectQuery{b.Select().From("users").ForUpdate(), b.Select().From("users").ForShare(), b.Select().From("users").Limit(1).ForUpdateSkipLocked()} {
-				q := sq.Build()
-				assert.Nil(t, q.LastError, driver)
-				assert.NotContains(t, q.SQL(), "FOR ", driver)
-			}
+		tx := txOn(driver)
+		for _, sq := range []*SelectQuery{tx.Select().From("users").ForUpdate(), tx.Select().From("users").ForShare(), tx.Select().From("users").Limit(1).ForUpdateSkipLocked()} {
+			q := sq.Build()
+			assert.Nil(t, q.LastError, driver)
+			assert.NotContains(t, q.SQL(), "FOR ", driver)
 		}
 	}
 
-	// a lock outside a transaction is released at once: rejected when the executor is a *sql.DB
-	for _, driver := range []string{"mysql", "postgres", "pgx", "unknown"} {
+	// a lock outside a transaction is released at once: rejected when the executor is a *sql.DB,
+	// on every database, SQLite included
+	for _, driver := range []string{"mysql", "postgres", "pgx", "unknown", "sqlite", "sqlite3"} {
 		db := NewFromDB(nil, driver)
-		for _, sq := range []*SelectQuery{db.Select().From("users").ForUpdate(), db.Select().From("users").ForShare(), db.Select().From("users").ForUpdateSkipLocked()} {
+		for method, sq := range map[string]*SelectQuery{
+			"ForUpdate":           db.Select().From("users").ForUpdate(),
+			"ForShare":            db.Select().From("users").ForShare(),
+			"ForUpdateSkipLocked": db.Select().From("users").ForUpdateSkipLocked(),
+		} {
 			q := sq.Build()
 			if assert.NotNil(t, q.LastError, driver) {
-				assert.Contains(t, q.LastError.Error(), "require a transaction", driver)
+				assert.Equal(t, method+" requires a transaction: outside one the lock is released when the statement ends", q.LastError.Error(), driver)
 			}
 		}
 		assert.Nil(t, db.Select().From("users").Build().LastError, driver)

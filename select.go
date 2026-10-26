@@ -235,13 +235,14 @@ func (s *SelectQuery) Offset(offset int64) *SelectQuery {
 //
 // Row locks exist only inside a transaction: outside one, the statement commits at once and the
 // lock is released immediately. So a locking read must be built from a Tx (tx.Select()); built
-// from a DB, whose executor is a *sql.DB, Build sets LastError. A locking read cannot be combined
-// with UNION, GROUP BY or DISTINCT (Build sets LastError); avoid aggregate functions too.
-// SQLite has no row locks (a write transaction locks the whole database), so the clause is left
-// out there. SQL Server and Oracle are not supported (Build sets LastError).
+// from a DB, whose executor is a *sql.DB, Build sets LastError on every database, SQLite included.
+// A locking read cannot be combined with UNION, GROUP BY or DISTINCT (Build sets LastError); avoid
+// aggregate functions too. SQLite has no row locks (a write transaction locks the whole database),
+// so inside a transaction the clause is left out there. SQL Server and Oracle are not supported
+// (Build sets LastError).
 // Of ForUpdate, ForShare and ForUpdateSkipLocked, the last one called wins.
 func (s *SelectQuery) ForUpdate() *SelectQuery {
-	s.lock = "FOR UPDATE"
+	s.lock = lockForUpdate
 	return s
 }
 
@@ -250,7 +251,7 @@ func (s *SelectQuery) ForUpdate() *SelectQuery {
 // It requires MySQL 8.0+ or PostgreSQL; MySQL 5.7 and MariaDB do not support FOR SHARE.
 // See ForUpdate for the rules that apply to all locking reads.
 func (s *SelectQuery) ForShare() *SelectQuery {
-	s.lock = "FOR SHARE"
+	s.lock = lockForShare
 	return s
 }
 
@@ -260,8 +261,22 @@ func (s *SelectQuery) ForShare() *SelectQuery {
 // It requires MySQL 8.0+ or PostgreSQL 9.5+. See ForUpdate for the rules that apply to all
 // locking reads.
 func (s *SelectQuery) ForUpdateSkipLocked() *SelectQuery {
-	s.lock = "FOR UPDATE SKIP LOCKED"
+	s.lock = lockForUpdateSkipLocked
 	return s
+}
+
+// The locking clauses set by ForUpdate, ForShare and ForUpdateSkipLocked.
+const (
+	lockForUpdate           = "FOR UPDATE"
+	lockForShare            = "FOR SHARE"
+	lockForUpdateSkipLocked = "FOR UPDATE SKIP LOCKED"
+)
+
+// lockMethods names the SelectQuery method of each locking clause, for error messages.
+var lockMethods = map[string]string{
+	lockForUpdate:           "ForUpdate",
+	lockForShare:            "ForShare",
+	lockForUpdateSkipLocked: "ForUpdateSkipLocked",
 }
 
 // buildLock appends the locking clause to sql, the SELECT statement with its ORDER BY and LIMIT.
@@ -275,15 +290,17 @@ func (s *SelectQuery) buildLock(qb QueryBuilder, sql string) (string, error) {
 	case s.distinct:
 		return sql, errors.New("a locking read cannot be combined with DISTINCT")
 	}
-	if _, ok := s.builder.(*SqliteBuilder); ok {
-		return sql, nil
-	}
-	// outside a transaction the lock is released as soon as the statement ends; only a plain
-	// *sql.DB is rejected, so custom or instrumented executors never get a false positive
+	// Outside a transaction the lock is released as soon as the statement ends, so it protects
+	// nothing (two job-queue workers could claim the same row). Rejected on every database,
+	// SQLite included, so that the bug surfaces in SQLite-backed test suites too. Only a plain
+	// *sql.DB is rejected, so custom or instrumented executors never get a false positive.
 	if eb, ok := s.builder.(interface{ Executor() Executor }); ok {
 		if _, ok := eb.Executor().(*gosql.DB); ok {
-			return sql, errors.New("ForUpdate/ForShare/ForUpdateSkipLocked require a transaction")
+			return sql, fmt.Errorf("%v requires a transaction: outside one the lock is released when the statement ends", lockMethods[s.lock])
 		}
+	}
+	if _, ok := s.builder.(*SqliteBuilder); ok {
+		return sql, nil
 	}
 	lqb, ok := qb.(LockQueryBuilder)
 	if !ok {
