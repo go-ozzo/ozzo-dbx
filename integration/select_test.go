@@ -122,3 +122,19 @@ func TestSelectQuery_TableNamePointerReceiver(t *testing.T) {
 		assert.Equal(t, "user2", c.Name)
 	}
 }
+
+func TestSelectQuery_LikeEscapedWildcard(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	for _, name := range []string{"50% off", "500 off"} {
+		_, err := db.Insert("item", dbx.Params{"name": name}).Execute()
+		assert.Nil(t, err)
+	}
+
+	// % in the value is escaped, so it matches only a literal %
+	var names []string
+	if assert.Nil(t, db.Select("name").From("item").Where(dbx.Like("name", "50%")).Column(&names)) {
+		assert.Equal(t, []string{"50% off"}, names)
+	}
+}

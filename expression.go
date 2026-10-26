@@ -312,7 +312,12 @@ type LikeExp struct {
 
 // Escape specifies how a LIKE expression should be escaped.
 // Each string at position 2i represents a special character and the string at position 2i+1 is
-// the corresponding escaped version.
+// the corresponding escaped version. The escaped versions must use the backslash as the escape
+// character (as DefaultLikeEscape does): it is the default of MySQL and PostgreSQL, and SQLite
+// gets an ESCAPE '\' clause.
+//
+// Calling Escape with no arguments turns escaping off: "_" and "%" in the values then act as
+// wildcards, e.g. NotLike("path", "_test.go").Escape() also excludes "latest.go".
 func (e *LikeExp) Escape(chars ...string) *LikeExp {
 	e.escape = chars
 	return e
@@ -334,6 +339,14 @@ func (e *LikeExp) Build(db *DB, params Params) string {
 		panic("LikeExp.Escape must be a slice of even number of strings")
 	}
 
+	// MySQL and PostgreSQL escape LIKE patterns with a backslash by default; SQLite has no default
+	// escape character, so the escaped wildcards would be matched literally with the backslash.
+	// MySQL must not get the clause: there '\' is an unterminated string literal.
+	escapeClause := ""
+	if _, ok := db.Builder.(*SqliteBuilder); ok && len(e.escape) > 0 {
+		escapeClause = ` ESCAPE '\'`
+	}
+
 	var parts []string
 	col := db.QuoteColumnName(e.col)
 	for _, value := range e.values {
@@ -348,7 +361,7 @@ func (e *LikeExp) Build(db *DB, params Params) string {
 			value += "%"
 		}
 		params[name] = value
-		parts = append(parts, fmt.Sprintf("%v %v {:%v}", col, e.Like, name))
+		parts = append(parts, fmt.Sprintf("%v %v {:%v}%v", col, e.Like, name, escapeClause))
 	}
 
 	if e.or {
