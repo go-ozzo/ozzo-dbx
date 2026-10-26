@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 type (
@@ -157,6 +158,48 @@ func (q *ModelQuery) Update(attrs ...string) error {
 		delete(cols, name)
 	}
 	_, err := q.builder.Update(q.model.tableName, Params(cols), HashExp(pk)).WithContext(q.ctx).Execute()
+	return err
+}
+
+// Upsert inserts a row in the table using the struct model associated with this query, or updates
+// the existing row if the insertion conflicts with it. The primary key is the conflict target.
+//
+// By default, it inserts and updates *all* public fields, including those nil or empty ones.
+// You may pass a list of the fields to this method to indicate that only those fields should be
+// inserted and updated. You may also call Exclude to exclude some fields from both the insertion
+// and the update (e.g. a creation timestamp that must not change once the row exists).
+// The primary key is never updated, and attrs and Exclude do not apply to it.
+//
+// If a model has a single-column primary key with an empty value, it is considered auto-incremental
+// and is left out of the insertion. Unlike Insert, Upsert does not fill the primary key field after
+// the statement runs, whether a row was inserted or updated.
+//
+// Upsert relies on Builder.Upsert, so it works on MySQL, PostgreSQL and SQLite and returns an error
+// on other databases. On MySQL the update also happens on a conflict with any other unique index of
+// the table: the matched row keeps its primary key, which then differs from the model's.
+// Upsert returns an error if no field is left to update besides the primary key.
+func (q *ModelQuery) Upsert(attrs ...string) error {
+	if q.lastError != nil {
+		return q.lastError
+	}
+	pk := q.model.pk()
+	if len(pk) == 0 {
+		return MissingPKError
+	}
+
+	cols := q.model.columns(attrs, q.exclude)
+	constraints := make([]string, 0, len(pk))
+	for name, value := range pk {
+		if len(pk) == 1 && isAutoInc(value) {
+			delete(cols, name)
+		} else {
+			cols[name] = value
+		}
+		constraints = append(constraints, name)
+	}
+	sort.Strings(constraints)
+
+	_, err := q.builder.Upsert(q.model.tableName, Params(cols), constraints...).WithContext(q.ctx).Execute()
 	return err
 }
 
