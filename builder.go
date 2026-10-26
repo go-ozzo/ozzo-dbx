@@ -51,6 +51,11 @@ type Builder interface {
 	// Otherwise it will update the row with the new values.
 	// The keys of cols are the column names, while the values of cols are the corresponding column
 	// values to be inserted.
+	//
+	// Each value is used in both the INSERT and the UPDATE part, Expression values included, so an
+	// expression that reads the existing row (e.g. "hits + 1") is not supported.
+	// On PostgreSQL and SQLite a NULL in a constraint column never conflicts (NULLs are distinct
+	// in unique indexes), so such a row is always inserted.
 	Upsert(table string, cols Params, constraints ...string) *Query
 	// Update creates a Query that represents an UPDATE SQL statement.
 	// The keys of cols are the column names, while the values of cols are the corresponding new column
