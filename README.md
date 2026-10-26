@@ -658,6 +658,10 @@ zero value, it is assumed to be auto-incremental and is left out of the insertio
 not fill the primary key field afterwards. On MySQL, a conflict with any other unique index also updates the matching
 row, which keeps its own primary key.
 
+The insertion part must be valid on its own even when the row already exists, because the database checks `NOT NULL`
+constraints before it detects the conflict. So `Upsert("Name")` fails for an existing row when another `NOT NULL`
+column without a default (e.g. `Email`) is left out; pass `Upsert("Name", "Email")` instead.
+
 
 ### Delete
 

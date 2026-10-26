@@ -178,6 +178,10 @@ func (q *ModelQuery) Update(attrs ...string) error {
 // on other databases. On MySQL the update also happens on a conflict with any other unique index of
 // the table: the matched row keeps its primary key, which then differs from the model's.
 // Upsert returns an error if no field is left to update besides the primary key.
+//
+// The insertion part must be valid on its own even when the row already exists: the database
+// checks NOT NULL constraints before it detects the conflict. So when you pass a list of fields,
+// it must include every NOT NULL column that has no default value.
 func (q *ModelQuery) Upsert(attrs ...string) error {
 	if q.lastError != nil {
 		return q.lastError
