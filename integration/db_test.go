@@ -213,3 +213,37 @@ func TestDB_Transactional(t *testing.T) {
 		assert.Equal(t, "Go in Action", name)
 	}
 }
+
+func TestDB_TransactionalCanceledContext(t *testing.T) {
+	db := getPreparedDB()
+	defer func() { _ = db.Close() }()
+
+	var before int
+	assert.Nil(t, db.NewQuery("SELECT COUNT(*) FROM item").Row(&before))
+
+	// the context is canceled after f's writes but before the commit: whether database/sql has
+	// already rolled the transaction back or not, nothing is committed and an error is returned
+	ctx, cancel := context.WithCancel(context.Background())
+	err := db.TransactionalContext(ctx, nil, func(tx *dbx.Tx) error {
+		if _, err := tx.Insert("item", dbx.Params{"name": "lost"}).Execute(); err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	})
+	assert.ErrorIs(t, err, context.Canceled)
+
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	err = db.WithContext(ctx2).Transactional(func(tx *dbx.Tx) error {
+		if _, err := tx.Insert("item", dbx.Params{"name": "lost"}).Execute(); err != nil {
+			return err
+		}
+		cancel2()
+		return nil
+	})
+	assert.ErrorIs(t, err, context.Canceled)
+
+	var after int
+	assert.Nil(t, db.NewQuery("SELECT COUNT(*) FROM item").Row(&after))
+	assert.Equal(t, before, after)
+}
