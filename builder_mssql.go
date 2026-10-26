@@ -5,6 +5,7 @@
 package dbx
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -83,6 +84,12 @@ func (b *MssqlBuilder) AlterColumn(table, col, typ string) *Query {
 	col = b.db.QuoteColumnName(col)
 	sql := fmt.Sprintf("ALTER TABLE %v ALTER COLUMN %v %v", b.db.QuoteTableName(table), col, typ)
 	return b.NewQuery(sql)
+}
+
+// BuildLock returns an error: SQL Server takes row locks through table hints (e.g. WITH (UPDLOCK)),
+// not through a FOR UPDATE clause.
+func (q *MssqlQueryBuilder) BuildLock(sql string, lock string) (string, error) {
+	return sql, errors.New("SQL Server does not support locking reads (" + lock + ")")
 }
 
 // BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
