@@ -5,9 +5,8 @@
 package dbx
 
 import (
+	"errors"
 	"fmt"
-	"sort"
-	"strings"
 )
 
 // PgsqlBuilder is the builder for PostgreSQL databases.
@@ -54,35 +53,20 @@ func (b *PgsqlBuilder) QueryBuilder() QueryBuilder {
 // Otherwise it will update the row with the new values.
 // The keys of cols are the column names, while the values of cols are the corresponding column
 // values to be inserted.
+//
+// The constraints are the conflict target columns (a primary key or unique index) and are required:
+// PostgreSQL rejects ON CONFLICT DO UPDATE without a target, so Upsert sets LastError instead.
+// The constraint columns are left out of the update list. Upsert also sets LastError if no column
+// is left to update.
 func (b *PgsqlBuilder) Upsert(table string, cols Params, constraints ...string) *Query {
-	q := b.Insert(table, cols)
-
-	names := []string{}
-	for name := range cols {
-		names = append(names, name)
+	if len(constraints) == 0 {
+		q := b.NewQuery("")
+		q.LastError = errors.New("Upsert requires the conflict target columns (constraints) on PostgreSQL")
+		return q
 	}
-	sort.Strings(names)
-
-	lines := []string{}
-	for _, name := range names {
-		value := cols[name]
-		name = b.db.QuoteColumnName(name)
-		if e, ok := value.(Expression); ok {
-			lines = append(lines, name+"="+e.Build(b.db, q.params))
-		} else {
-			lines = append(lines, fmt.Sprintf("%v={:p%v}", name, len(q.params)))
-			q.params[fmt.Sprintf("p%v", len(q.params))] = value
-		}
-	}
-
-	if len(constraints) > 0 {
-		c := b.quoteColumns(constraints)
-		q.sql += " ON CONFLICT (" + c + ") DO UPDATE SET " + strings.Join(lines, ", ")
-	} else {
-		q.sql += " ON CONFLICT DO UPDATE SET " + strings.Join(lines, ", ")
-	}
-
-	return b.NewQuery(q.sql).Bind(q.params)
+	return b.upsert(table, cols, constraints, func(assignments string) string {
+		return " ON CONFLICT (" + b.quoteColumns(constraints) + ") DO UPDATE SET " + assignments
+	})
 }
 
 // DropIndex creates a Query that can be used to remove the named index from a table.
