@@ -7,6 +7,7 @@
  * - database: ozzo_dbx_test
  */
 
+DROP TABLE IF EXISTS `device` CASCADE;
 DROP TABLE IF EXISTS `account_period` CASCADE;
 DROP TABLE IF EXISTS `account` CASCADE;
 DROP TABLE IF EXISTS `order_item` CASCADE;
@@ -75,6 +76,14 @@ CREATE TABLE `account_period` (
   `created` varchar(32),
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQ_account_period` (`account_id`, `period`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `device` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `serial` varchar(32) NULL,
+  `name` varchar(64),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UQ_device_serial` (`serial`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `customer` (email, name, address, status) VALUES ('user1@example.com', 'user1', 'address1', 1);

@@ -483,7 +483,7 @@ constraint columns are given. `Upsert()` returns a query whose `Execute()` fails
 the constraint columns, or if the constraint columns are missing for PostgreSQL or SQLite.
 
 Each value is used in both the insert and the update part, `dbx.Expression` values included, so a counter such as
-`"hits": dbx.NewExp("hits + 1")` does not work with `Upsert()`. On PostgreSQL and SQLite a `NULL` in a constraint
+`"hits": dbx.NewExp("hits + 1")` does not work with `Upsert()`. On every database a `NULL` in a constraint
 column never conflicts (unique indexes treat NULLs as distinct), so such a row is always inserted.
 
 ### Building Schema Manipulation Queries
