@@ -467,10 +467,10 @@ to check; they are required for PostgreSQL and SQLite and are left out of the up
 ```go
 // MySQL:
 // INSERT INTO `users` (`email`, `id`, `name`) VALUES ({:p0}, {:p1}, {:p2})
-//   ON DUPLICATE KEY UPDATE `email`={:p3}, `name`={:p4}
+//   ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `name`=VALUES(`name`)
 // PostgreSQL:
 // INSERT INTO "users" ("email", "id", "name") VALUES ({:p0}, {:p1}, {:p2})
-//   ON CONFLICT ("id") DO UPDATE SET "email"={:p3}, "name"={:p4}
+//   ON CONFLICT ("id") DO UPDATE SET "email"=EXCLUDED."email", "name"=EXCLUDED."name"
 _, err := db.Upsert("users", dbx.Params{
 	"id":    100,
 	"name":  "James",
@@ -482,8 +482,11 @@ On MySQL, `ON DUPLICATE KEY UPDATE` fires on a conflict with *any* primary key o
 constraint columns are given. `Upsert()` returns a query whose `Execute()` fails if no column is left to update besides
 the constraint columns, or if the constraint columns are missing for PostgreSQL or SQLite.
 
-Each value is used in both the insert and the update part, `dbx.Expression` values included, so a counter such as
-`"hits": dbx.NewExp("hits + 1")` does not work with `Upsert()`. On every database a `NULL` in a constraint
+The update part copies the proposed row (`EXCLUDED.col` on PostgreSQL and SQLite, `VALUES(col)` on MySQL), so it
+stores exactly what the insert would have stored: `BEFORE INSERT` triggers apply, and a `dbx.Expression` value is
+evaluated once. An expression that reads the existing row, such as a counter `"hits": dbx.NewExp("hits + 1")`, does
+not work with `Upsert()`. On MySQL, `VALUES()` is deprecated since 8.0.20 (warning 1287), but it is the only form that
+works on MySQL 5.7, 8 and 9 and on MariaDB alike. On every database a `NULL` in a constraint
 column never conflicts (unique indexes treat NULLs as distinct), so such a row is always inserted.
 
 ### Building Schema Manipulation Queries
@@ -647,7 +650,7 @@ creation time. For example,
 db, _ := dbx.Open("mysql", "user:pass@/example")
 
 // INSERT INTO customer (id, name, email, status) VALUES (100, 'example', 'test@example.com', 0)
-//   ON DUPLICATE KEY UPDATE name='example', email='test@example.com', status=0
+//   ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), status=VALUES(status)
 err := db.Model(&customer).Upsert()
 // insert or update all public fields except CreatedAt
 err = db.Model(&customer).Exclude("CreatedAt").Upsert()
