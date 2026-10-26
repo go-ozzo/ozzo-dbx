@@ -480,6 +480,10 @@ On MySQL, `ON DUPLICATE KEY UPDATE` fires on a conflict with *any* primary key o
 constraint columns are given. `Upsert()` returns a query whose `Execute()` fails if no column is left to update besides
 the constraint columns, or if the constraint columns are missing for PostgreSQL or SQLite.
 
+Each value is used in both the insert and the update part, `dbx.Expression` values included, so a counter such as
+`"hits": dbx.NewExp("hits + 1")` does not work with `Upsert()`. On PostgreSQL and SQLite a `NULL` in a constraint
+column never conflicts (unique indexes treat NULLs as distinct), so such a row is always inserted.
+
 ### Building Schema Manipulation Queries
 
 Schema manipulation queries are those changing the database schema, such as creating a new table, adding a new column.
