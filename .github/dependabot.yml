@@ -1,0 +1,15 @@
+# Keeps GitHub Actions on current majors.
+# Go module updates are handled deliberately: a dependency update can raise the go.mod `go`
+# line, which raises it for every importer (a MINOR release). Security updates for modules
+# still come from Dependabot security updates (repository setting).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

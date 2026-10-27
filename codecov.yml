@@ -1,0 +1,20 @@
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 2%
+    patch:
+      default:
+        target: auto
+        informational: true
+  ignore:
+    - "testdata/**"
+    - "integration/testdata/**"
+
+comment:
+  layout: "header, diff, flags, files"
+  require_changes: true
