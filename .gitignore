@@ -1,38 +1,64 @@
-.idea
+# Private — never committed
+.claude/
+.pm/
+.reference.md
+docs/dev/
+tmp/
+reference/
 
-# dev artifacts
+# AI/IDE tooling state
+.gode/
+.goda/
+.goco/
+.mcp.json
+.idea/
+.vscode/
 *.vim
+*.swp
+*~
 
-# Compiled Object files, Static and Dynamic libs (Shared Objects)
+# Build and test artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+/*.out
+*.prof
+coverage.out
+coverage.txt
+coverage.html
+*.log
+*.bak
+*.orig
+/bin/
+/dist/
+/build/
+
+# Compiled object files and cgo intermediates
 *.o
 *.a
-*.so
-
-# Folders
 _obj
 _test
-
-# Architecture specific extensions/prefixes
 *.[568vq]
 [568vq].out
-
 *.cgo1.go
 *.cgo2.c
 _cgo_defun.c
 _cgo_gotypes.go
 _cgo_export.*
-
 _testmain.go
 
-*.exe
-*.test
-*.prof
+# Go workspace (local overrides only)
+go.work
+go.work.sum
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS files
 .DS_Store
-
-# AI settings
-.claude/
-.goco/
-
-# Dev docs (private)
-docs/dev/
-tmp/
+Thumbs.db
