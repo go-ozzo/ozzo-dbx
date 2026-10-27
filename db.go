@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -212,7 +213,7 @@ func (db *DB) Transactional(f func(*Tx) error) (err error) {
 			panic(p)
 		} else if err != nil {
 			if err2 := tx.Rollback(); err2 != nil {
-				if err2 == sql.ErrTxDone {
+				if errors.Is(err2, sql.ErrTxDone) {
 					return
 				}
 				err = Errors{err, err2}
@@ -245,7 +246,7 @@ func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f f
 			panic(p)
 		} else if err != nil {
 			if err2 := tx.Rollback(); err2 != nil {
-				if err2 == sql.ErrTxDone {
+				if errors.Is(err2, sql.ErrTxDone) {
 					return
 				}
 				err = Errors{err, err2}

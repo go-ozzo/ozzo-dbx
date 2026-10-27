@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -13,11 +14,12 @@ import (
 
 // txDriverState records what a fake driver's transactions did.
 type txDriverState struct {
-	mu         sync.Mutex
-	commits    int
-	rollbacks  int
-	rolledBack chan struct{} // closed on the first rollback
-	once       sync.Once
+	mu          sync.Mutex
+	commits     int
+	rollbacks   int
+	rolledBack  chan struct{} // closed on the first rollback
+	once        sync.Once
+	rollbackErr error // returned by the driver's Rollback
 }
 
 type txConnector struct{ s *txDriverState }
@@ -59,7 +61,7 @@ func (t txTx) Rollback() error {
 	t.s.rollbacks++
 	t.s.mu.Unlock()
 	t.s.once.Do(func() { close(t.s.rolledBack) })
-	return nil
+	return t.s.rollbackErr
 }
 
 func newTxTestDB() (*DB, *txDriverState) {
@@ -141,6 +143,12 @@ func TestTransactional_EndedByCallback(t *testing.T) {
 			commits, rollbacks = s.counts()
 			assert.Equal(t, 0, commits)
 			assert.Equal(t, 1, rollbacks)
+
+			// f returns an error and the driver reports the rollback as a wrapped ErrTxDone:
+			// the transaction is already over, so only f's error is returned
+			db, s = newTxTestDB()
+			s.rollbackErr = fmt.Errorf("driver: %w", sql.ErrTxDone)
+			assert.Equal(t, errF, run(db, func(*Tx) error { return errF }))
 		})
 	}
 }

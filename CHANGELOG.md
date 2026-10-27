@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `Transactional()` and `TransactionalContext()` also recognise a driver-wrapped `sql.ErrTxDone` (`errors.Is` instead of `==`) when the callback has already ended the transaction itself. database/sql returns it unwrapped, so nothing changes with the standard drivers
 ## [1.7.0] - 2026-10-26
 
 ### Added
