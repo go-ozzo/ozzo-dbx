@@ -53,6 +53,7 @@ type (
 		// LogFunc logs the SQL statements being executed. Defaults to nil, meaning no logging.
 		LogFunc LogFunc
 		// PerfFunc logs the SQL execution time. Defaults to nil, meaning no performance profiling.
+		//
 		// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 		PerfFunc PerfFunc
 		// QueryLogFunc is called each time when performing a SQL query that returns data.
@@ -197,6 +198,8 @@ func (db *DB) Wrap(sqlTx *sql.Tx) *Tx {
 // If the function returns an error, the transaction will be rolled back.
 // Otherwise, the transaction will be committed. If the DB context (see WithContext) is canceled before
 // the commit, database/sql rolls the transaction back and Transactional returns the context error.
+//
+//nolint:nestif // the rollback/commit defer; refactor tracked in 20261027-dbx-reduce-complexity
 func (db *DB) Transactional(f func(*Tx) error) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -228,6 +231,8 @@ func (db *DB) Transactional(f func(*Tx) error) (err error) {
 // If the function returns an error, the transaction will be rolled back.
 // Otherwise, the transaction will be committed. If ctx is canceled before the commit, database/sql
 // rolls the transaction back and TransactionalContext returns ctx.Err().
+//
+//nolint:nestif // the rollback/commit defer; refactor tracked in 20261027-dbx-reduce-complexity
 func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f func(*Tx) error) (err error) {
 	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
@@ -294,7 +299,7 @@ func (db *DB) QuoteColumnName(s string) string {
 
 var (
 	plRegex    = regexp.MustCompile(`\{:\w+\}`)
-	quoteRegex = regexp.MustCompile(`(\{\{[\w\-\. ]+\}\}|\[\[[\w\-\. ]+\]\])`)
+	quoteRegex = regexp.MustCompile(`(\{\{[\w\-. ]+\}\}|\[\[[\w\-. ]+\]\])`)
 )
 
 // processSQL replaces the named param placeholders in the given SQL with anonymous ones.

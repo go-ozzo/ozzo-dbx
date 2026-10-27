@@ -71,14 +71,14 @@ func NewSelectQuery(builder Builder, db *DB) *SelectQuery {
 }
 
 // Context returns the context associated with the query.
-func (q *SelectQuery) Context() context.Context {
-	return q.ctx
+func (s *SelectQuery) Context() context.Context {
+	return s.ctx
 }
 
 // WithContext associates a context with the query.
-func (q *SelectQuery) WithContext(ctx context.Context) *SelectQuery {
-	q.ctx = ctx
-	return q
+func (s *SelectQuery) WithContext(ctx context.Context) *SelectQuery {
+	s.ctx = ctx
+	return s
 }
 
 // Select specifies the columns to be selected.
@@ -135,7 +135,7 @@ func (s *SelectQuery) OrWhere(e Expression) *SelectQuery {
 
 // Join specifies a JOIN clause.
 // The "typ" parameter specifies the JOIN type (e.g. "INNER JOIN", "LEFT JOIN").
-func (s *SelectQuery) Join(typ string, table string, on Expression) *SelectQuery {
+func (s *SelectQuery) Join(typ, table string, on Expression) *SelectQuery {
 	s.join = append(s.join, JoinInfo{typ, table, on})
 	return s
 }
@@ -428,20 +428,20 @@ func (s *SelectQuery) All(slice interface{}) error {
 }
 
 // Rows builds and executes the SELECT query and returns a Rows object for data retrieval purpose.
-// This is a shortcut to SelectQuery.Build().Rows()
+// This is a shortcut to SelectQuery.Build().Rows().
 func (s *SelectQuery) Rows() (*Rows, error) {
 	return s.Build().WithContext(s.ctx).Rows()
 }
 
 // Row builds and executes the SELECT query and populates the first row of the result into the specified variables.
-// This is a shortcut to SelectQuery.Build().Row()
+// This is a shortcut to SelectQuery.Build().Row().
 func (s *SelectQuery) Row(a ...interface{}) error {
 	return s.Build().WithContext(s.ctx).Row(a...)
 }
 
 // Column builds and executes the SELECT statement and populates the first column of the result into a slice.
 // Note that the parameter must be a pointer to a slice.
-// This is a shortcut to SelectQuery.Build().Column()
+// This is a shortcut to SelectQuery.Build().Column().
 func (s *SelectQuery) Column(a interface{}) error {
 	return s.Build().WithContext(s.ctx).Column(a)
 }

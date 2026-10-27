@@ -52,6 +52,7 @@ type Query struct {
 	// LogFunc is used to log the SQL statement being executed.
 	LogFunc LogFunc
 	// PerfFunc is used to log the SQL execution time. It is ignored if nil.
+	//
 	// Deprecated: Please use QueryLogFunc and ExecLogFunc instead.
 	PerfFunc PerfFunc
 	// QueryLogFunc is called each time when performing a SQL query that returns data.
@@ -64,11 +65,11 @@ type Query struct {
 }
 
 // NewQuery creates a new Query with the given SQL statement.
-func NewQuery(db *DB, executor Executor, sql string) *Query {
-	rawSQL, placeholders := db.processSQL(sql)
+func NewQuery(db *DB, executor Executor, statement string) *Query {
+	rawSQL, placeholders := db.processSQL(statement)
 	return &Query{
 		executor:           executor,
-		sql:                sql,
+		sql:                statement,
 		rawSQL:             rawSQL,
 		placeholders:       placeholders,
 		params:             Params{},
@@ -109,15 +110,16 @@ func (q *Query) logSQL() string {
 			v, _ = valuer.Value()
 		}
 		var sv string
-		if str, ok := v.(string); ok {
-			sv = strconv.Quote(str)
-		} else if bs, ok := v.([]byte); ok {
+		switch tv := v.(type) {
+		case string:
+			sv = strconv.Quote(tv)
+		case []byte:
 			if q.LogBinaryFormatter != nil {
-				sv = q.LogBinaryFormatter(bs)
+				sv = q.LogBinaryFormatter(tv)
 			} else {
-				sv = strconv.Quote(string(bs))
+				sv = strconv.Quote(string(tv))
 			}
-		} else {
+		default:
 			sv = fmt.Sprintf("%v", v)
 		}
 		s = strings.ReplaceAll(s, "{:"+k+"}", sv)
@@ -172,29 +174,26 @@ func (q *Query) Execute() (result sql.Result, err error) {
 	err = q.LastError
 	q.LastError = nil
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	var params []interface{}
 	params, err = replacePlaceholders(q.placeholders, q.params)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	start := time.Now()
 
-	if q.ctx == nil {
-		if q.stmt == nil {
-			result, err = q.executor.Exec(q.rawSQL, params...)
-		} else {
-			result, err = q.stmt.Exec(params...)
-		}
-	} else {
-		if q.stmt == nil {
-			result, err = q.executor.ExecContext(q.ctx, q.rawSQL, params...)
-		} else {
-			result, err = q.stmt.ExecContext(q.ctx, params...)
-		}
+	switch {
+	case q.ctx == nil && q.stmt == nil:
+		result, err = q.executor.Exec(q.rawSQL, params...)
+	case q.ctx == nil:
+		result, err = q.stmt.Exec(params...)
+	case q.stmt == nil:
+		result, err = q.executor.ExecContext(q.ctx, q.rawSQL, params...)
+	default:
+		result, err = q.stmt.ExecContext(q.ctx, params...)
 	}
 
 	if q.ExecLogFunc != nil {
@@ -206,7 +205,7 @@ func (q *Query) Execute() (result sql.Result, err error) {
 	if q.PerfFunc != nil {
 		q.PerfFunc(time.Since(start).Nanoseconds(), q.logSQL(), true)
 	}
-	return
+	return result, err
 }
 
 // One executes the SQL statement and populates the first row of the result into a struct or NullStringMap.
@@ -259,30 +258,27 @@ func (q *Query) Rows() (rows *Rows, err error) {
 	err = q.LastError
 	q.LastError = nil
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	var params []interface{}
 	params, err = replacePlaceholders(q.placeholders, q.params)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	start := time.Now()
 
 	var rr *sql.Rows
-	if q.ctx == nil {
-		if q.stmt == nil {
-			rr, err = q.executor.Query(q.rawSQL, params...)
-		} else {
-			rr, err = q.stmt.Query(params...)
-		}
-	} else {
-		if q.stmt == nil {
-			rr, err = q.executor.QueryContext(q.ctx, q.rawSQL, params...)
-		} else {
-			rr, err = q.stmt.QueryContext(q.ctx, params...)
-		}
+	switch {
+	case q.ctx == nil && q.stmt == nil:
+		rr, err = q.executor.Query(q.rawSQL, params...)
+	case q.ctx == nil:
+		rr, err = q.stmt.Query(params...)
+	case q.stmt == nil:
+		rr, err = q.executor.QueryContext(q.ctx, q.rawSQL, params...)
+	default:
+		rr, err = q.stmt.QueryContext(q.ctx, params...)
 	}
 	rows = &Rows{rr, q.FieldMapper}
 
@@ -295,7 +291,7 @@ func (q *Query) Rows() (rows *Rows, err error) {
 	if q.PerfFunc != nil {
 		q.PerfFunc(time.Since(start).Nanoseconds(), q.logSQL(), false)
 	}
-	return
+	return rows, err
 }
 
 // replacePlaceholders converts a list of named parameters into a list of anonymous parameters.

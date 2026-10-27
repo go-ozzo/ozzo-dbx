@@ -74,12 +74,12 @@ func (b *OciBuilder) AlterColumn(table, col, typ string) *Query {
 
 // BuildLock returns an error: the locking reads are not supported for Oracle, whose LIMIT and
 // OFFSET are emulated by wrapping the query, and which has no FOR SHARE.
-func (q *OciQueryBuilder) BuildLock(sql string, lock string) (string, error) {
+func (q *OciQueryBuilder) BuildLock(sql, lock string) (string, error) {
 	return sql, errors.New("locking reads (" + lock + ") are not supported for Oracle")
 }
 
 // BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
-func (q *OciQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
+func (q *OciQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit, offset int64) string {
 	if orderBy := q.BuildOrderBy(cols); orderBy != "" {
 		sql += "\n" + orderBy
 	}

@@ -310,13 +310,13 @@ func (b *BaseBuilder) Delete(table string, where Expression) *Query {
 // The keys of cols are the column names, while the values of cols are the corresponding column types.
 // The optional "options" parameters will be appended to the generated SQL statement.
 func (b *BaseBuilder) CreateTable(table string, cols map[string]string, options ...string) *Query {
-	names := []string{}
+	names := make([]string, 0, len(cols))
 	for name := range cols {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
-	columns := []string{}
+	columns := make([]string, 0, len(names))
 	for _, name := range names {
 		columns = append(columns, b.db.QuoteColumnName(name)+" "+cols[name])
 	}

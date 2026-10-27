@@ -17,7 +17,7 @@ type execRecorder struct {
 func (r *execRecorder) Exec(query string, args ...interface{}) (sql.Result, error) {
 	r.sql = append(r.sql, query)
 	r.args = append(r.args, args)
-	return nil, nil
+	return nil, nil //nolint:nilnil // test fake: the code under test never reads the Result of these statements
 }
 
 func (r *execRecorder) ExecContext(_ context.Context, query string, args ...interface{}) (sql.Result, error) {
