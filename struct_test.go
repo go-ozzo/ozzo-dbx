@@ -194,7 +194,6 @@ type FB struct {
 }
 
 func TestStructInfo(t *testing.T) {
-
 	mExpect := map[string]string{
 		"address": "Address", "email": "Email", "id": "ID", "name": "Name", "status": "Status",
 	}

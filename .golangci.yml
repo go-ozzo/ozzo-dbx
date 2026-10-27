@@ -1,0 +1,153 @@
+# GolangCI-Lint v2 configuration for github.com/go-ozzo/ozzo-dbx
+# Documentation: https://golangci-lint.run/docs/configuration/
+# Baseline from the new-repo-go standard. Every exclusion below needs a reason comment;
+# never disable errcheck/staticcheck/gosec for whole production packages.
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    # Code quality and complexity
+    - gocyclo
+    - gocognit
+    - funlen
+    - maintidx
+    - cyclop
+    - nestif
+
+    # Bug detection
+    - govet
+    - staticcheck
+    - errcheck
+    - errorlint
+    - gosec
+    - nilnil
+    - nilerr
+    - nilnesserr
+    - ineffassign
+
+    # Code style and consistency
+    - misspell
+    - whitespace
+    - unconvert
+    - unparam
+
+    # Naming conventions
+    - errname
+    - revive
+
+    # Performance
+    - prealloc
+    - makezero
+
+    # Code practices
+    - goconst
+    - gocritic
+    - goprintffuncname
+    - nolintlint
+    - nakedret
+
+    # Comments and documentation
+    - godot
+
+    # Additional quality checkers
+    - dupl
+    - dogsled
+    - durationcheck
+
+  settings:
+    govet:
+      enable:
+        - copylocks
+      disable:
+        - fieldalignment
+
+    gocyclo:
+      min-complexity: 15
+
+    cyclop:
+      max-complexity: 15
+
+    funlen:
+      lines: 120
+      statements: 60
+
+    gocognit:
+      min-complexity: 20
+
+    misspell:
+      locale: US
+
+    nestif:
+      min-complexity: 4
+
+    revive:
+      rules:
+        - name: var-naming
+        - name: exported
+        - name: error-return
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - commentFormatting
+        - whyNoLint
+        - unnamedResult
+        - commentedOutCode
+      settings:
+        hugeParam:
+          sizeThreshold: 256
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - cyclop
+          - funlen
+          - maintidx
+          - errcheck
+          - gosec
+          - goconst
+          - dupl
+
+      # Builder and Expression implementations keep the interface's parameter names, so the
+      # godoc of every dialect reads the same; stubs such as SqliteBuilder.AlterColumn ignore
+      # them by design. Scoped to those files and to this one revive rule.
+      - path: (^|/)(builder(_[a-z]+)?|expression)\.go$
+        linters:
+          - revive
+        text: "unused-parameter"
+
+    # Gitignored scratch and reference code is absent in CI.
+    paths:
+      - tmp/
+      - reference/
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false

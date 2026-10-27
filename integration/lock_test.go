@@ -119,7 +119,7 @@ func TestSelectQuery_LockErrors(t *testing.T) {
 // pending rows at the same time, each in its own transaction, and never get the same row.
 func TestSelectQuery_ForUpdateSkipLockedConcurrentClaimers(t *testing.T) {
 	db := getLockTestDB(t)
-	// a safety net against a hang, not a synchronisation mechanism
+	// a safety net against a hang, not a synchronization mechanism
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

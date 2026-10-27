@@ -88,12 +88,12 @@ func (b *MssqlBuilder) AlterColumn(table, col, typ string) *Query {
 
 // BuildLock returns an error: SQL Server takes row locks through table hints (e.g. WITH (UPDLOCK)),
 // not through a FOR UPDATE clause.
-func (q *MssqlQueryBuilder) BuildLock(sql string, lock string) (string, error) {
+func (q *MssqlQueryBuilder) BuildLock(sql, lock string) (string, error) {
 	return sql, errors.New("SQL Server does not support locking reads (" + lock + ")")
 }
 
 // BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
-func (q *MssqlQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
+func (q *MssqlQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit, offset int64) string {
 	orderBy := q.BuildOrderBy(cols)
 	if limit < 0 && offset < 0 {
 		if orderBy == "" {

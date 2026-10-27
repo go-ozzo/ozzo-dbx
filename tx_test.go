@@ -127,7 +127,7 @@ func TestTransactional_EndedByCallback(t *testing.T) {
 			commits, _ = s.counts()
 			assert.Equal(t, 1, commits)
 
-			// f rolls back itself and returns nil: no error (existing behaviour)
+			// f rolls back itself and returns nil: no error (existing behavior)
 			db, s = newTxTestDB()
 			assert.Nil(t, run(db, func(tx *Tx) error { return tx.Rollback() }))
 			commits, rollbacks = s.counts()

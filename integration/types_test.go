@@ -41,7 +41,7 @@ func (m CustomerNull) TableName() string {
 }
 
 type CustomerEmbedded struct {
-	Id    int
+	Id    int //nolint:revive // "Id", not "ID", on purpose: it covers the "Id" primary-key fallback in StructInfo.build
 	Email *string
 	InnerCustomer
 }

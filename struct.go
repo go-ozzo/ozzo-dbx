@@ -19,6 +19,7 @@ type (
 	// TableMapFunc converts a sample struct into a DB table name.
 	TableMapFunc func(a interface{}) string
 
+	// StructInfo describes how the fields of a struct type map to DB columns.
 	StructInfo struct {
 		nameMap   map[string]*FieldInfo // mapping from struct field names to field infos
 		dbNameMap map[string]*FieldInfo // mapping from db column names to field infos
@@ -31,6 +32,7 @@ type (
 		tableName string        // the db table name for the struct
 	}
 
+	// FieldInfo describes a struct field that maps to a DB column.
 	FieldInfo struct {
 		name   string // field name
 		dbName string // db column name
@@ -44,7 +46,7 @@ type (
 )
 
 var (
-	// DbTag is the name of the struct tag used to specify the column name for the associated struct field
+	// DbTag is the name of the struct tag used to specify the column name for the associated struct field.
 	DbTag = "db"
 
 	fieldRegex      = regexp.MustCompile(`([^A-Z_])([A-Z])`)
@@ -208,6 +210,7 @@ func (si *StructInfo) GetFieldInfoByColumnName(dbColumnName string) *FieldInfo {
 	return nil
 }
 
+//nolint:cyclop,gocognit,gocyclo,nestif // the field walk with embedded structs; refactor tracked in 20261027-dbx-reduce-complexity
 func (si *StructInfo) build(a reflect.Type, path []int, namePrefix, dbNamePrefix string, mapper FieldMapFunc) {
 	n := a.NumField()
 	for i := 0; i < n; i++ {
@@ -288,11 +291,12 @@ func parseTag(tag string) (string, bool) {
 }
 
 func concat(s1, s2 string) string {
-	if s1 == "" {
+	switch {
+	case s1 == "":
 		return s2
-	} else if s2 == "" {
+	case s2 == "":
 		return s1
-	} else {
+	default:
 		return s1 + "." + s2
 	}
 }

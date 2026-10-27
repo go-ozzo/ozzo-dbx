@@ -143,13 +143,13 @@ func NotExists(exp Expression) Expression {
 }
 
 // Between generates a BETWEEN expression.
-// For example, Between("age", 10, 30) generates: "age" BETWEEN 10 AND 30
+// For example, Between("age", 10, 30) generates: "age" BETWEEN 10 AND 30.
 func Between(col string, from, to interface{}) Expression {
 	return &BetweenExp{col, from, to, false}
 }
 
 // NotBetween generates a NOT BETWEEN expression.
-// For example, NotBetween("age", 10, 30) generates: "age" NOT BETWEEN 10 AND 30
+// For example, NotBetween("age", 10, 30) generates: "age" NOT BETWEEN 10 AND 30.
 func NotBetween(col string, from, to interface{}) Expression {
 	return &BetweenExp{col, from, to, true}
 }

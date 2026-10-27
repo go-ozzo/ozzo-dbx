@@ -63,6 +63,8 @@ func (r *Rows) ScanMap(a NullStringMap) error {
 // For example, "LastName" is mapped to "last_name", "MyID" is mapped to "my_id", and so on.
 // To change the default behavior, set DB.FieldMapper with your custom mapping function.
 // You may also set Query.FieldMapper to change the behavior for particular queries.
+//
+//nolint:nestif // the column-to-field scan; refactor tracked in 20261027-dbx-reduce-complexity
 func (r *Rows) ScanStruct(a interface{}) error {
 	rv := reflect.ValueOf(a)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() { //nolint:govet // reflect.Ptr is valid, govet toolchain mismatch
@@ -99,6 +101,8 @@ func (r *Rows) ScanStruct(a interface{}) error {
 
 // all populates all rows of query result into a slice of struct or NullStringMap.
 // Note that the slice must be given as a pointer.
+//
+//nolint:cyclop,gocognit,gocyclo,nestif // the column-to-field scan; refactor tracked in 20261027-dbx-reduce-complexity
 func (r *Rows) all(slice interface{}) error {
 	defer r.Close() //nolint:errcheck // standard cleanup
 

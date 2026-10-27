@@ -63,7 +63,7 @@ func (q *BaseQueryBuilder) DB() *DB {
 }
 
 // the regexp for columns and tables.
-var selectRegex = regexp.MustCompile(`(?i:\s+as\s+|\s+)([\w\-_\.]+)$`)
+var selectRegex = regexp.MustCompile(`(?i:\s+as\s+|\s+)([\w\-.]+)$`)
 
 // BuildSelect generates a SELECT clause from the given selected column names.
 func (q *BaseQueryBuilder) BuildSelect(cols []string, distinct bool, option string) string {
@@ -172,7 +172,7 @@ func (q *BaseQueryBuilder) BuildGroupBy(cols []string) string {
 }
 
 // BuildOrderByAndLimit generates the ORDER BY and LIMIT clauses.
-func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit int64, offset int64) string {
+func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit, offset int64) string {
 	if orderBy := q.BuildOrderBy(cols); orderBy != "" {
 		sql += " " + orderBy
 	}
@@ -183,7 +183,7 @@ func (q *BaseQueryBuilder) BuildOrderByAndLimit(sql string, cols []string, limit
 }
 
 // BuildLock appends the locking clause of a locking read to the SELECT statement.
-func (q *BaseQueryBuilder) BuildLock(sql string, lock string) (string, error) {
+func (q *BaseQueryBuilder) BuildLock(sql, lock string) (string, error) {
 	return sql + " " + lock, nil
 }
 
@@ -234,7 +234,7 @@ func (q *BaseQueryBuilder) BuildOrderBy(cols []string) string {
 }
 
 // BuildLimit generates the LIMIT clause.
-func (q *BaseQueryBuilder) BuildLimit(limit int64, offset int64) string {
+func (q *BaseQueryBuilder) BuildLimit(limit, offset int64) string {
 	if limit < 0 && offset > 0 {
 		// most DBMS requires LIMIT when OFFSET is present
 		limit = 9223372036854775807 // 2^63 - 1

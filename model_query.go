@@ -26,10 +26,11 @@ type (
 )
 
 var (
-	MissingPKError   = errors.New("missing primary key declaration")        //nolint:staticcheck // public API, renaming would break backward compatibility
-	CompositePKError = errors.New("composite primary key is not supported") //nolint:staticcheck // public API, renaming would break backward compatibility
+	MissingPKError   = errors.New("missing primary key declaration")        //nolint:staticcheck,revive,errname // public API, renaming would break backward compatibility
+	CompositePKError = errors.New("composite primary key is not supported") //nolint:staticcheck,revive,errname // public API, renaming would break backward compatibility
 )
 
+// NewModelQuery creates a ModelQuery for the given model, which must be a pointer to a struct.
 func NewModelQuery(model interface{}, fieldMapFunc FieldMapFunc, db *DB, builder Builder) *ModelQuery {
 	q := &ModelQuery{
 		db:      db,
@@ -97,7 +98,7 @@ func (q *ModelQuery) Insert(attrs ...string) error {
 	pkField := indirect(q.model.dbNameMap[pkName].getField(q.model.value))
 	switch pkField.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		pkField.SetUint(uint64(pkValue))
+		pkField.SetUint(uint64(pkValue)) //nolint:gosec // G115: LastInsertId of an auto-increment unsigned PK is never negative
 	default:
 		pkField.SetInt(pkValue)
 	}

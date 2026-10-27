@@ -204,7 +204,7 @@ func TestDB_Transactional(t *testing.T) {
 		_, err = tx.NewQuery("DELETE FROM items WHERE id=2").Execute()
 		if err != nil {
 			_ = tx.Rollback()
-			return nil
+			return nil //nolint:nilerr // on purpose: f rolls back itself and reports success, the case under test
 		}
 		return nil
 	})

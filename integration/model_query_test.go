@@ -109,7 +109,7 @@ func TestModelQuery_Insert(t *testing.T) {
 		if assert.Nil(t, err) {
 			assert.Equal(t, 101, customer.ID)
 			var c Customer
-			db.Select().From("customer").Where(dbx.HashExp{"ID": 101}).One(&c) //nolint:errcheck // NULL name -> string scan error expected
+			db.Select().From("customer").Where(dbx.HashExp{"ID": 101}).One(&c) // NULL name -> string scan error expected
 			assert.Equal(t, "", c.Name)
 			assert.Equal(t, email, c.Email)
 			assert.Equal(t, 0, c.Status)
