@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `Transactional()` and `TransactionalContext()` also recognise a driver-wrapped `sql.ErrTxDone` (`errors.Is` instead of `==`) when the callback has already ended the transaction itself. database/sql returns it unwrapped, so nothing changes with the standard drivers
+- CI: one required check `Test` that gathers every gated job; unit tests on Go oldstable and stable on Linux, plus stable on Windows and macOS; the `go.mod` minimum (1.22) and a linux/386 build; the MySQL integration suite on the minimum and on stable; pinned golangci-lint v2.15.0 with a strict `.golangci.yml`; `gofmt` and `go mod tidy` checks; govulncheck; Dependabot for GitHub Actions. The unused `.travis.yml` is removed
 ## [1.7.0] - 2026-10-26
 
 ### Added

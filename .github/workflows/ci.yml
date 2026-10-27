@@ -1,5 +1,11 @@
 name: CI
 
+# Go: oldstable + stable (the two supported releases), plus the go.mod minimum.
+# The ruleset requires ONE check, the "Test" gate at the end: jobs and the matrix can change
+# without touching the ruleset. A new required job goes into the gate's `needs`.
+# Tool versions are pinned and bumped on purpose: an unpinned tool breaks every PR at once
+# when its new release lands.
+
 on:
   push:
     branches: [master]
@@ -8,41 +14,94 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+
+env:
+  # Never download a newer Go behind our back: the job must run the Go it asked for, or
+  # the minimum and oldstable tests prove nothing.
+  GOTOOLCHAIN: local
 
 jobs:
-  test-unit:
-    name: Unit Tests - Go ${{ matrix.go-version }}
-    runs-on: ubuntu-latest
+  test:
+    name: Test - ${{ matrix.os }} - Go ${{ matrix.go-version }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write # Codecov OIDC
     strategy:
+      fail-fast: false
       matrix:
-        go-version: ['1.22', '1.23']
+        include:
+          - { os: ubuntu-latest, go-version: oldstable }
+          - { os: ubuntu-latest, go-version: stable }
+          - { os: windows-latest, go-version: stable }
+          - { os: macos-latest, go-version: stable }
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-
-      - name: Test
-        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-
+      - name: Verify modules
+        run: go mod verify
+      - name: Vet
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        run: go vet ./...
+      - name: Test (race)
+        shell: bash
+        run: go test -race -count=1 -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload coverage to Codecov
-        if: matrix.go-version == '1.23'
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
         uses: codecov/codecov-action@v7
+        continue-on-error: true # fork PRs get no OIDC token
         with:
           use_oidc: true
           files: ./coverage.txt
           flags: unit
           name: codecov-ozzo-dbx-unit
 
-  test-integration:
-    name: Integration Tests - Go ${{ matrix.go-version }}
+  # The go.mod `go` line is a promise to every importer. Read it from the `go` line, not with
+  # go-version-file: setup-go prefers a `toolchain` line when one exists.
+  test-minimum:
+    name: Test - ubuntu-latest - Go minimum
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: gomod
+        run: echo "go=$(awk '$1 == "go" { print $2; exit }' go.mod)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ steps.gomod.outputs.go }}
+          cache: true
+      - run: go version
+      - name: Test (race)
+        run: go test -race -count=1 ./...
+
+  build-386:
+    name: Build - linux 386
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: true
+      - run: GOARCH=386 go build ./...
+      # No -race: the race detector does not support 386.
+      - run: GOARCH=386 go test -count=1 ./...
+
+  # DB behaviour is the core of the library, so the MySQL suite is part of the gate, on the
+  # newest Go and on the go.mod minimum. The integration module has its own go.mod; its `go`
+  # line follows the root one.
+  test-integration:
+    name: Integration - MySQL 8.0 - Go ${{ matrix.go }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Codecov OIDC
     strategy:
+      fail-fast: false
       matrix:
-        go-version: ['1.22', '1.23']
+        go: [minimum, stable]
 
     services:
       mysql:
@@ -60,11 +119,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-
+      - id: gover
+        run: |
+          if [ "${{ matrix.go }}" = minimum ]; then
+            echo "go=$(awk '$1 == "go" { print $2; exit }' go.mod)" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=${{ matrix.go }}" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ steps.gover.outputs.go }}
           cache: true
+          cache-dependency-path: integration/go.sum
+      - run: go version
 
       - name: Wait for MySQL
         run: |
@@ -72,22 +139,27 @@ jobs:
             sleep 1
           done
 
-      - name: Test
+      - name: Vet
+        working-directory: integration
+        run: go vet ./...
+
+      - name: Test (race)
         working-directory: integration
         env:
           DBX_MYSQL_DSN: "root:@tcp(127.0.0.1:3306)/ozzo_dbx_test?parseTime=true"
-        run: go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=github.com/go-ozzo/ozzo-dbx ./...
+        run: go test -race -count=1 -coverprofile=coverage.txt -covermode=atomic -coverpkg=github.com/go-ozzo/ozzo-dbx ./...
 
       - name: Upload coverage to Codecov
-        if: matrix.go-version == '1.23'
+        if: matrix.go == 'stable'
         uses: codecov/codecov-action@v7
+        continue-on-error: true # fork PRs get no OIDC token
         with:
           use_oidc: true
           files: ./integration/coverage.txt
           flags: integration
           name: codecov-ozzo-dbx-integration
 
-  # Canary on the newest MySQL release (floating "innovation" tag). Not a required check: it exists
+  # Canary on the newest MySQL release (floating "innovation" tag). Not in the gate: it exists
   # to show early when a newer server breaks something we rely on, e.g. VALUES() in
   # ON DUPLICATE KEY UPDATE, deprecated since MySQL 8.0.20.
   test-integration-mysql-latest:
@@ -113,8 +185,9 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.23'
+          go-version: stable
           cache: true
+          cache-dependency-path: integration/go.sum
 
       - name: Wait for MySQL
         run: |
@@ -134,25 +207,81 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.23'
+          go-version: stable
           cache: true
-
-      - name: Check formatting
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "The following files are not formatted:"
-            gofmt -l .
-            exit 1
-          fi
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Run golangci-lint
+      - name: golangci-lint (root module)
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          # Exact version: bump it in its own PR that fixes the new findings, and with each
+          # new Go minor (an older linter may not understand the new Go).
+          version: v2.15.0
           args: --timeout=5m
+      - name: golangci-lint (integration module)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
+          working-directory: integration
+          args: --timeout=5m --config ../.golangci.yml
+
+  formatting:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: true
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Not gofmt-ed:"; echo "$unformatted"; exit 1
+          fi
+      - name: go mod tidy
+        run: |
+          go mod tidy
+          go -C integration mod tidy
+          files="go.mod go.sum integration/go.mod integration/go.sum"
+          if [ -n "$(git status --porcelain -- $files)" ]; then
+            echo "go mod tidy changed go.mod/go.sum:"
+            git status --porcelain -- $files
+            git diff -- $files; exit 1
+          fi
+
+  # Informational: not in the gate, so a new advisory in a dependency does not block
+  # unrelated PRs. It stays on the latest govulncheck on purpose: the vulnerability data must
+  # be current.
+  vulncheck:
+    name: Vulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: govulncheck (root module)
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: stable
+      - name: govulncheck (integration module)
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: stable
+          work-dir: integration
+
+  # The one required check. `if: always()` and the explicit result check are both needed: a
+  # job that is skipped (for example because a job it needs failed) counts as passed for a
+  # required check, so a gate without them can let a red PR through.
+  gate:
+    name: Test
+    if: always()
+    needs: [test, test-minimum, build-386, test-integration, lint, formatting]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every required job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != success ]; then echo "a required job ended with: $r"; exit 1; fi
+          done
