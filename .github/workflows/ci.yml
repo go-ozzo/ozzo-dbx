@@ -165,6 +165,8 @@ jobs:
   test-integration-mysql-latest:
     name: Integration Tests - MySQL innovation (canary)
     runs-on: ubuntu-latest
+    # A break shows as a failed job, but does not turn the run (and the README badge) red.
+    continue-on-error: true
 
     services:
       mysql:
@@ -257,6 +259,9 @@ jobs:
   vulncheck:
     name: Vulncheck
     runs-on: ubuntu-latest
+    # An advisory without a fixed version makes govulncheck exit 3: the job shows as failed,
+    # but the run (and the README badge) stays green.
+    continue-on-error: true
     steps:
       - name: govulncheck (root module)
         uses: golang/govulncheck-action@v1
